@@ -10,6 +10,7 @@ const accountRoutes = require('./routes/accountRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const propertyRoutes = require('./routes/propertyRoutes');
 const quoteRoutes = require('./routes/quoteRoutes');
+const templateRoutes = require('./routes/templateRoutes');
 
 // Stellen Sie sicher, dass das Datenverzeichnis existiert
 const dataDir = path.join(__dirname, '../data');
@@ -32,6 +33,7 @@ app.use('/api', accountRoutes);
 app.use('/api', contactRoutes);
 app.use('/api', propertyRoutes);
 app.use('/api', quoteRoutes);
+app.use('/api', templateRoutes);
 
 // Einfache Root-Route für API-Test
 app.get('/', (req, res) => {
@@ -42,7 +44,8 @@ app.get('/', (req, res) => {
       accounts: '/api/accounts',
       contacts: '/api/contacts',
       properties: '/api/properties',
-      quotes: '/api/quotes'
+      quotes: '/api/quotes',
+      templates: '/api/templates'
     }
   });
 });
