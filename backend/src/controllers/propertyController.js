@@ -15,7 +15,11 @@ const getAllProperties = (req, res) => {
 // Hausobjekt nach ID abrufen
 const getPropertyById = (req, res) => {
   try {
-    const property = Property.getById(req.params.id);
+    const propertyId = parseInt(req.params.id, 10);
+    if (isNaN(propertyId)) {
+      return res.status(400).json({ success: false, message: 'Ungültige Hausobjekt-ID' });
+    }
+    const property = Property.getById(propertyId);
     if (property) {
       res.json({ success: true, data: property });
     } else {
@@ -30,7 +34,11 @@ const getPropertyById = (req, res) => {
 // Hausobjekte nach Account-ID abrufen
 const getPropertiesByAccountId = (req, res) => {
   try {
-    const properties = Property.getByAccountId(req.params.accountId);
+    const accountId = parseInt(req.params.accountId, 10);
+    if (isNaN(accountId)) {
+      return res.status(400).json({ success: false, message: 'Ungültige Account-ID' });
+    }
+    const properties = Property.getByAccountId(accountId);
     res.json({ success: true, data: properties });
   } catch (err) {
     console.error('Fehler beim Abrufen der Hausobjekte:', err);
@@ -52,7 +60,11 @@ const createProperty = (req, res) => {
 // Hausobjekt aktualisieren
 const updateProperty = (req, res) => {
   try {
-    const updatedProperty = Property.update(req.params.id, req.body);
+    const propertyId = parseInt(req.params.id, 10);
+    if (isNaN(propertyId)) {
+      return res.status(400).json({ success: false, message: 'Ungültige Hausobjekt-ID' });
+    }
+    const updatedProperty = Property.update(propertyId, req.body);
     res.json({ success: true, data: updatedProperty });
   } catch (err) {
     console.error('Fehler beim Aktualisieren des Hausobjekts:', err);
@@ -63,7 +75,11 @@ const updateProperty = (req, res) => {
 // Hausobjekt löschen
 const deleteProperty = (req, res) => {
   try {
-    Property.delete(req.params.id);
+    const propertyId = parseInt(req.params.id, 10);
+    if (isNaN(propertyId)) {
+      return res.status(400).json({ success: false, message: 'Ungültige Hausobjekt-ID' });
+    }
+    Property.delete(propertyId);
     res.json({ success: true, message: 'Hausobjekt erfolgreich gelöscht' });
   } catch (err) {
     console.error('Fehler beim Löschen des Hausobjekts:', err);

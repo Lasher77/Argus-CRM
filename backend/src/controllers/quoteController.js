@@ -17,10 +17,14 @@ const getAllQuotes = (req, res) => {
 // Angebot nach ID abrufen
 const getQuoteById = (req, res) => {
   try {
-    const quote = Quote.getById(req.params.id);
+    const quoteId = parseInt(req.params.id, 10);
+    if (isNaN(quoteId)) {
+      return res.status(400).json({ success: false, message: "Ungültige Angebots-ID" });
+    }
+    const quote = Quote.getById(quoteId);
     if (quote) {
       // Angebotspositionen abrufen
-      const items = Quote.getItems(req.params.id);
+      const items = Quote.getItems(quoteId);
       // Stelle sicher, dass items immer ein Array ist, auch wenn die Model-Funktion es bereits tut
       const responseItems = Array.isArray(items) ? items : [];
       res.json({
@@ -44,7 +48,11 @@ const getQuoteById = (req, res) => {
 // Angebote nach Account-ID abrufen
 const getQuotesByAccountId = (req, res) => {
   try {
-    const quotes = Quote.getByAccountId(req.params.accountId);
+    const accountId = parseInt(req.params.accountId, 10);
+    if (isNaN(accountId)) {
+      return res.status(400).json({ success: false, message: "Ungültige Account-ID" });
+    }
+    const quotes = Quote.getByAccountId(accountId);
     res.json({ success: true, data: quotes });
   } catch (err) {
     console.error("Fehler beim Abrufen der Angebote:", err);
@@ -99,7 +107,10 @@ const createQuote = (req, res) => {
 const updateQuote = (req, res) => {
   try {
     const { items, ...quoteData } = req.body;
-    const quoteId = req.params.id;
+    const quoteId = parseInt(req.params.id, 10);
+    if (isNaN(quoteId)) {
+      return res.status(400).json({ success: false, message: "Ungültige Angebots-ID" });
+    }
 
     // *** GEÄNDERT: Überprüfung auf property_id statt contact_id ***
     if (!quoteData.property_id) {
@@ -146,7 +157,10 @@ const updateQuote = (req, res) => {
 // Angebot löschen
 const deleteQuote = (req, res) => {
   try {
-    const quoteId = req.params.id;
+    const quoteId = parseInt(req.params.id, 10);
+    if (isNaN(quoteId)) {
+      return res.status(400).json({ success: false, message: "Ungültige Angebots-ID" });
+    }
     // Zuerst alle Angebotspositionen löschen
     const items = Quote.getItems(quoteId);
     items.forEach((item) => {
@@ -167,7 +181,11 @@ const deleteQuote = (req, res) => {
 // Angebotsposition hinzufügen
 const addQuoteItem = (req, res) => {
   try {
-    const newItem = Quote.addItem(req.params.quoteId, req.body);
+    const quoteId = parseInt(req.params.quoteId, 10);
+    if (isNaN(quoteId)) {
+      return res.status(400).json({ success: false, message: "Ungültige Angebots-ID" });
+    }
+    const newItem = Quote.addItem(quoteId, req.body);
     res.status(201).json({ success: true, data: newItem });
   } catch (err) {
     console.error("Fehler beim Hinzufügen der Angebotsposition:", err);
@@ -181,7 +199,11 @@ const addQuoteItem = (req, res) => {
 // Angebotsposition aktualisieren
 const updateQuoteItem = (req, res) => {
   try {
-    const updatedItem = Quote.updateItem(req.params.itemId, req.body);
+    const itemId = parseInt(req.params.itemId, 10);
+    if (isNaN(itemId)) {
+      return res.status(400).json({ success: false, message: "Ungültige Positions-ID" });
+    }
+    const updatedItem = Quote.updateItem(itemId, req.body);
     res.json({ success: true, data: updatedItem });
   } catch (err) {
     console.error("Fehler beim Aktualisieren der Angebotsposition:", err);
@@ -195,7 +217,11 @@ const updateQuoteItem = (req, res) => {
 // Angebotsposition löschen
 const deleteQuoteItem = (req, res) => {
   try {
-    Quote.deleteItem(req.params.itemId);
+    const itemId = parseInt(req.params.itemId, 10);
+    if (isNaN(itemId)) {
+      return res.status(400).json({ success: false, message: "Ungültige Positions-ID" });
+    }
+    Quote.deleteItem(itemId);
     res.json({ success: true, message: "Angebotsposition erfolgreich gelöscht" });
   } catch (err) {
     console.error("Fehler beim Löschen der Angebotsposition:", err);

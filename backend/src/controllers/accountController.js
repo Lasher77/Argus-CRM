@@ -17,7 +17,10 @@ const accountController = {
   // Account nach ID abrufen
   getAccountById: (req, res) => {
     try {
-      const accountId = parseInt(req.params.id);
+      const accountId = parseInt(req.params.id, 10);
+      if (isNaN(accountId)) {
+        return res.status(400).json({ success: false, message: 'Ungültige Account-ID' });
+      }
       const account = Account.getById(accountId);
       
       if (!account) {
@@ -58,7 +61,10 @@ const accountController = {
   // Account aktualisieren
   updateAccount: (req, res) => {
     try {
-      const accountId = parseInt(req.params.id);
+      const accountId = parseInt(req.params.id, 10);
+      if (isNaN(accountId)) {
+        return res.status(400).json({ success: false, message: 'Ungültige Account-ID' });
+      }
       const { name, address, phone, email, website, tax_number, notes } = req.body;
       
       // Validierung
@@ -89,7 +95,10 @@ const accountController = {
   // Account löschen
   deleteAccount: (req, res) => {
     try {
-      const accountId = parseInt(req.params.id);
+      const accountId = parseInt(req.params.id, 10);
+      if (isNaN(accountId)) {
+        return res.status(400).json({ success: false, message: 'Ungültige Account-ID' });
+      }
       
       // Prüfen, ob Account existiert
       const existingAccount = Account.getById(accountId);
@@ -113,7 +122,10 @@ const accountController = {
   // Kontakte eines Accounts abrufen
   getAccountContacts: (req, res) => {
     try {
-      const accountId = parseInt(req.params.id);
+      const accountId = parseInt(req.params.id, 10);
+      if (isNaN(accountId)) {
+        return res.status(400).json({ success: false, message: 'Ungültige Account-ID' });
+      }
       
       // Prüfen, ob Account existiert
       const existingAccount = Account.getById(accountId);
@@ -132,7 +144,10 @@ const accountController = {
   // Hausobjekte eines Accounts abrufen
   getAccountProperties: (req, res) => {
     try {
-      const accountId = parseInt(req.params.id);
+      const accountId = parseInt(req.params.id, 10);
+      if (isNaN(accountId)) {
+        return res.status(400).json({ success: false, message: 'Ungültige Account-ID' });
+      }
       
       // Prüfen, ob Account existiert
       const existingAccount = Account.getById(accountId);
