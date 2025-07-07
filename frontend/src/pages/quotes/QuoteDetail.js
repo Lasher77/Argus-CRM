@@ -33,7 +33,12 @@ import ReceiptIcon from '@mui/icons-material/Receipt';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import axios from 'axios';
+
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
 import { jsPDF } from 'jspdf';
+
 
 // API Service für Angebote
 const API_URL = 'http://localhost:3000/api';
@@ -200,6 +205,60 @@ const QuoteDetail = () => {
 
     const doc = new jsPDF();
 
+
+    doc.setFontSize(18);
+    doc.text('Angebot', 105, 15, { align: 'center' });
+
+    doc.setFontSize(12);
+    doc.text(`Angebotsnr.: ${quote.quote_number}`, 14, 30);
+    doc.text(`Ausgestellt am: ${formatDate(quote.quote_date)}`, 14, 37);
+    doc.text(`Gültig bis: ${formatDate(quote.valid_until)}`, 14, 44);
+
+    let startY = 51;
+    if (account) {
+      doc.text(`Kunde: ${account.name}`, 14, 51);
+      startY = 58;
+      if (account.address) {
+        doc.text(account.address, 14, 58);
+        startY = 65;
+      }
+    }
+
+    autoTable(doc, {
+      startY,
+      head: [[
+        'Pos.',
+        'Beschreibung',
+        'Menge',
+        'Einheit',
+        'Einzelpreis',
+        'MwSt.',
+        'Netto',
+        'Brutto'
+      ]],
+      body: validItems.map((item) => [
+        item.position,
+        item.description,
+        item.quantity,
+        item.unit,
+        formatCurrency(item.unit_price),
+        `${item.vat_rate}%`,
+        formatCurrency(item.total_net),
+        formatCurrency(item.total_gross)
+      ]),
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [63, 81, 181], textColor: 255 },
+      theme: 'grid'
+    });
+
+    const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : startY + 10;
+    doc.text(`Gesamt Netto: ${formatCurrency(calculateTotalNet())}`, 14, finalY);
+    doc.text(
+      `Gesamt Brutto: ${formatCurrency(calculateTotalGross())}`,
+      14,
+      finalY + 7
+    );
+=======
     doc.setFontSize(16);
     doc.text(`Angebot #${quote.quote_number}`, 10, 10);
 
@@ -239,6 +298,7 @@ const QuoteDetail = () => {
     doc.text(`Gesamt Netto: ${formatCurrency(calculateTotalNet())}`, 10, y);
     y += 6;
     doc.text(`Gesamt Brutto: ${formatCurrency(calculateTotalGross())}`, 10, y);
+
 
     doc.save(`Angebot_${quote.quote_number}.pdf`);
   };
