@@ -1,0 +1,15 @@
+# Ignore node dependencies
+node_modules/
+
+# Environment files
+.env
+
+# macOS metadata
+**/.DS_Store
+
+# Database files
+/data/
+*.db
+
+# Logs
+*.log
