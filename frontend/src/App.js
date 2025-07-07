@@ -22,6 +22,7 @@ import PropertyForm from './pages/properties/PropertyForm';
 import QuoteList from './pages/quotes/QuoteList';
 import QuoteDetail from './pages/quotes/QuoteDetail';
 import QuoteForm from './pages/quotes/QuoteForm';
+import LayoutEditor from './pages/settings/LayoutEditor';
 
 function App() {
   return (
@@ -53,7 +54,10 @@ function App() {
         <Route path="quotes/:id" element={<QuoteDetail />} />
         <Route path="quotes/new" element={<QuoteForm />} />
         <Route path="quotes/edit/:id" element={<QuoteForm />} />
-        
+
+        {/* Settings */}
+        <Route path="settings" element={<LayoutEditor />} />
+
         {/* Fallback for unknown routes */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

@@ -26,6 +26,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import HomeIcon from '@mui/icons-material/Home';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ReceiptIcon from '@mui/icons-material/Receipt';
+import SettingsIcon from '@mui/icons-material/Settings';
 
 const drawerWidth = 240;
 
@@ -93,6 +94,7 @@ const MainLayout = () => {
     { text: 'Hausobjekte', icon: <HomeIcon />, path: '/properties' },
     { text: 'Angebote', icon: <DescriptionIcon />, path: '/quotes' },
     { text: 'Rechnungen', icon: <ReceiptIcon />, path: '/invoices' },
+    { text: 'Einstellungen', icon: <SettingsIcon />, path: '/settings' },
   ];
 
   return (
