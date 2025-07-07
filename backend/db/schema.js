@@ -182,6 +182,17 @@ function createTables() {
     )
   `);
 
+  // PDF-Vorlagen
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS pdf_templates (
+      template_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      layout_json TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
   // Benutzer
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
@@ -233,6 +244,7 @@ function dropTables() {
     'properties',
     'contacts',
     'products',
+    'pdf_templates',
     'users',
     'accounts'
   ];
