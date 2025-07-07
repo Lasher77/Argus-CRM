@@ -21,7 +21,11 @@ import {
   TableRow,
   CircularProgress,
   Snackbar,
-  Alert
+  Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -107,7 +111,9 @@ const QuoteDetail = () => {
   const [quote, setQuote] = useState(null);
   const [account, setAccount] = useState(null);
   // *** NEU: Initialisiere items immer als leeres Array ***
-  const [items, setItems] = useState([]); 
+  const [items, setItems] = useState([]);
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
   // Angebots-Daten laden
   useEffect(() => {
@@ -153,6 +159,25 @@ const QuoteDetail = () => {
       fetchAccount();
     }
   }, [quote]);
+
+  // Vorlagen laden
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/templates`);
+        if (res.data && res.data.data) {
+          setTemplates(res.data.data);
+          if (res.data.data.length > 0) {
+            setSelectedTemplateId(res.data.data[0].template_id);
+          }
+        }
+      } catch (err) {
+        console.error('Fehler beim Laden der Templates:', err);
+      }
+    };
+
+    fetchTemplates();
+  }, []);
 
   // *** Entfernt: Separates Laden der Items, da sie jetzt im Haupt-Quote-Objekt enthalten sind ***
   // useEffect(() => {
@@ -201,15 +226,50 @@ const QuoteDetail = () => {
   const handleExportPdf = () => {
     if (!quote) return;
 
+    const template = templates.find((t) => t.template_id === selectedTemplateId);
+    let layout = null;
+    if (template && template.layout_json) {
+      try {
+        layout = JSON.parse(template.layout_json);
+      } catch (err) {
+        console.error('Fehler beim Parsen der Template-Daten:', err);
+      }
+    }
+
     const doc = new jsPDF();
 
-    doc.setFontSize(18);
-    doc.text('Angebot', 105, 15, { align: 'center' });
+    // Elemente aus dem Template zeichnen
+    if (layout) {
+      if (layout.logo) {
+        try {
+          doc.addImage(layout.logo, 'JPEG', 10, 10, 50, 20);
+        } catch (err) {
+          console.error('Fehler beim Laden des Logos:', err);
+        }
+      }
 
-    doc.setFontSize(12);
-    doc.text(`Angebotsnr.: ${quote.quote_number}`, 14, 30);
-    doc.text(`Ausgestellt am: ${formatDate(quote.quote_date)}`, 14, 37);
-    doc.text(`Gültig bis: ${formatDate(quote.valid_until)}`, 14, 44);
+      if (Array.isArray(layout.elements)) {
+        layout.elements.forEach((el) => {
+          if (el.type === 'text') {
+            if (el.fontFamily) doc.setFont(el.fontFamily);
+            if (el.fontSize) doc.setFontSize(el.fontSize);
+            if (el.color) doc.setTextColor(el.color);
+            doc.text(el.text || '', el.x || 10, el.y || 10);
+          } else if (el.type === 'image' && el.src) {
+            doc.addImage(el.src, 'JPEG', el.x || 10, el.y || 10, el.width || 20, el.height || 20);
+          }
+        });
+      }
+    } else {
+      // Fallback ohne Template
+      doc.setFontSize(18);
+      doc.text('Angebot', 105, 15, { align: 'center' });
+
+      doc.setFontSize(12);
+      doc.text(`Angebotsnr.: ${quote.quote_number}`, 14, 30);
+      doc.text(`Ausgestellt am: ${formatDate(quote.quote_date)}`, 14, 37);
+      doc.text(`Gültig bis: ${formatDate(quote.valid_until)}`, 14, 44);
+    }
 
     let startY = 51;
     if (account) {
@@ -312,19 +372,34 @@ const QuoteDetail = () => {
             sx={{ ml: 2 }}
           />
         </Box>
-        <Box>
-          <Button 
-            variant="outlined" 
-            color="primary" 
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <FormControl size="small" sx={{ mr: 1, minWidth: 150 }}>
+            <InputLabel id="template-select-label">Vorlage</InputLabel>
+            <Select
+              labelId="template-select-label"
+              value={selectedTemplateId}
+              label="Vorlage"
+              onChange={(e) => setSelectedTemplateId(e.target.value)}
+            >
+              {templates.map((tpl) => (
+                <MenuItem key={tpl.template_id} value={tpl.template_id}>
+                  {tpl.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Button
+            variant="outlined"
+            color="primary"
             onClick={handleExportPdf}
             sx={{ mr: 1 }}
           >
             Als PDF
           </Button>
           {quote.status === 'accepted' && (
-            <Button 
-              variant="outlined" 
-              color="primary" 
+            <Button
+              variant="outlined"
+              color="primary"
               onClick={handleCreateInvoice}
               sx={{ mr: 1 }}
             >
