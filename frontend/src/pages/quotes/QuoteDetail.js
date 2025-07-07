@@ -36,6 +36,12 @@ import axios from 'axios';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+import { jsPDF } from 'jspdf';
+
+
 // API Service für Angebote
 const API_URL = 'http://localhost:3000/api';
 
@@ -253,6 +259,48 @@ const QuoteDetail = () => {
       14,
       finalY + 7
     );
+
+    doc.setFontSize(16);
+    doc.text(`Angebot #${quote.quote_number}`, 10, 10);
+
+    doc.setFontSize(12);
+    if (account) {
+      doc.text(`Kunde: ${account.name}`, 10, 20);
+    }
+    doc.text(`Ausgestellt am: ${formatDate(quote.quote_date)}`, 10, 30);
+    doc.text(`Gültig bis: ${formatDate(quote.valid_until)}`, 10, 40);
+
+    let y = 50;
+    doc.text('Pos  Beschreibung                    Menge  Einheit  Einzelpreis  MwSt  Netto  Brutto', 10, y);
+    y += 6;
+
+    validItems.forEach((item) => {
+      doc.text(
+        `${item.position}`,
+        10,
+        y
+      );
+      doc.text(`${item.description}`, 25, y);
+      doc.text(String(item.quantity), 100, y, { align: 'right' });
+      doc.text(`${item.unit}`, 115, y);
+      doc.text(formatCurrency(item.unit_price), 135, y, { align: 'right' });
+      doc.text(`${item.vat_rate}%`, 160, y, { align: 'right' });
+      doc.text(formatCurrency(item.total_net), 180, y, { align: 'right' });
+      doc.text(formatCurrency(item.total_gross), 205, y, { align: 'right' });
+      y += 6;
+
+      if (y > 270) {
+        doc.addPage();
+        y = 10;
+      }
+    });
+
+    y += 10;
+    doc.text(`Gesamt Netto: ${formatCurrency(calculateTotalNet())}`, 10, y);
+    y += 6;
+    doc.text(`Gesamt Brutto: ${formatCurrency(calculateTotalGross())}`, 10, y);
+
+
 
     doc.save(`Angebot_${quote.quote_number}.pdf`);
   };
