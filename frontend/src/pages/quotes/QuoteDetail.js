@@ -33,6 +33,8 @@ import ReceiptIcon from '@mui/icons-material/Receipt';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import axios from 'axios';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -205,7 +207,6 @@ const QuoteDetail = () => {
 
     const doc = new jsPDF();
 
-
     doc.setFontSize(18);
     doc.text('Angebot', 105, 15, { align: 'center' });
 
@@ -258,7 +259,7 @@ const QuoteDetail = () => {
       14,
       finalY + 7
     );
-=======
+
     doc.setFontSize(16);
     doc.text(`Angebot #${quote.quote_number}`, 10, 10);
 
@@ -298,6 +299,7 @@ const QuoteDetail = () => {
     doc.text(`Gesamt Netto: ${formatCurrency(calculateTotalNet())}`, 10, y);
     y += 6;
     doc.text(`Gesamt Brutto: ${formatCurrency(calculateTotalGross())}`, 10, y);
+
 
 
     doc.save(`Angebot_${quote.quote_number}.pdf`);
