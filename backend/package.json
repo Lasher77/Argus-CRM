@@ -1,0 +1,22 @@
+{
+  "name": "crm-argus",
+  "version": "1.0.0",
+  "description": "CRM-System für Hausverwaltungen",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "init-db": "node db/init.js",
+    "seed-db": "node db/seed.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "better-sqlite3": "^8.5.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
