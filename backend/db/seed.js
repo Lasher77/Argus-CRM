@@ -119,49 +119,53 @@ function seedDatabase() {
     const properties = [
       {
         account_id: 1,
+        contact_id: 1,
         name: 'Wohnanlage Mitte',
-        street: 'Berliner Str.',
-        house_number: '123',
+        address: 'Berliner Str. 123',
         postal_code: '10115',
         city: 'Berlin',
+        country: 'Deutschland',
         notes: 'Wohnanlage mit 24 Wohneinheiten, Baujahr 1998, letzte Sanierung 2018.',
         alt_invoice_address: null
       },
       {
         account_id: 1,
+        contact_id: 1,
         name: 'Bürogebäude Kreuzberg',
-        street: 'Oranienstr.',
-        house_number: '45',
+        address: 'Oranienstr. 45',
         postal_code: '10997',
         city: 'Berlin',
+        country: 'Deutschland',
         notes: 'Bürogebäude mit 12 Einheiten, Baujahr 2005.',
         alt_invoice_address: null
       },
       {
         account_id: 2,
+        contact_id: 3,
         name: 'Wohnkomplex Süd',
-        street: 'Hauptstraße',
-        house_number: '45',
+        address: 'Hauptstraße 45',
         postal_code: '80331',
         city: 'München',
+        country: 'Deutschland',
         notes: 'Wohnkomplex mit 36 Wohneinheiten und Tiefgarage.',
         alt_invoice_address: null
       },
       {
         account_id: 3,
+        contact_id: 4,
         name: 'Geschäftshaus Zentrum',
-        street: 'Gartenweg',
-        house_number: '8',
+        address: 'Gartenweg 8',
         postal_code: '50667',
         city: 'Köln',
+        country: 'Deutschland',
         notes: 'Gemischt genutztes Objekt mit Geschäften im EG und Wohnungen in den Obergeschossen.',
         alt_invoice_address: null
       }
     ];
-    
+
     const insertProperty = db.prepare(`
-      INSERT INTO properties (account_id, name, street, house_number, postal_code, city, notes, alt_invoice_address)
-      VALUES (@account_id, @name, @street, @house_number, @postal_code, @city, @notes, @alt_invoice_address)
+      INSERT INTO properties (account_id, name, address, city, postal_code, country, contact_id, notes, alt_invoice_address)
+      VALUES (@account_id, @name, @address, @city, @postal_code, @country, @contact_id, @notes, @alt_invoice_address)
     `);
     
     properties.forEach(property => {

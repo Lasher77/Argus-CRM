@@ -46,15 +46,17 @@ function createTables() {
       property_id INTEGER PRIMARY KEY AUTOINCREMENT,
       account_id INTEGER NOT NULL,
       name TEXT NOT NULL,
-      street TEXT NOT NULL,
-      house_number TEXT NOT NULL,
-      postal_code TEXT NOT NULL,
-      city TEXT NOT NULL,
+      address TEXT NOT NULL,
+      city TEXT,
+      postal_code TEXT,
+      country TEXT,
+      contact_id INTEGER,
       notes TEXT,
       alt_invoice_address TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE CASCADE
+      FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE CASCADE,
+      FOREIGN KEY (contact_id) REFERENCES contacts(contact_id)
     )
   `);
 
