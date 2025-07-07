@@ -51,6 +51,7 @@ function createTables() {
       postal_code TEXT NOT NULL,
       city TEXT NOT NULL,
       notes TEXT,
+      alt_invoice_address TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE CASCADE
