@@ -212,11 +212,22 @@ const PropertyDetail = () => {
                         <ListItemIcon>
                           <LocationOnIcon />
                         </ListItemIcon>
-                        <ListItemText 
-                          primary="Adresse" 
-                          secondary={property.address} 
+                        <ListItemText
+                          primary="Adresse"
+                          secondary={property.address}
                         />
                       </ListItem>
+                      {property.alt_invoice_address && (
+                        <ListItem>
+                          <ListItemIcon>
+                            <LocationOnIcon />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary="Alternative Rechnungsanschrift"
+                            secondary={property.alt_invoice_address}
+                          />
+                        </ListItem>
+                      )}
                       {(property.postal_code || property.city) && (
                         <ListItem>
                           <ListItemIcon>

@@ -20,9 +20,9 @@ const Property = {
   create: (property) => {
     const stmt = db.prepare(`
       INSERT INTO properties (
-        name, address, city, postal_code, country, 
-        account_id, contact_id, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        name, address, city, postal_code, country,
+        account_id, contact_id, notes, alt_invoice_address
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     const result = stmt.run(
@@ -33,7 +33,8 @@ const Property = {
       property.country,
       property.account_id,
       property.contact_id,
-      property.notes
+      property.notes,
+      property.alt_invoice_address
     );
     
     return { ...property, property_id: result.lastInsertRowid };
@@ -49,7 +50,8 @@ const Property = {
         country = ?,
         account_id = ?,
         contact_id = ?,
-        notes = ?
+        notes = ?,
+        alt_invoice_address = ?
       WHERE property_id = ?
     `);
     
@@ -62,6 +64,7 @@ const Property = {
       property.account_id,
       property.contact_id,
       property.notes,
+      property.alt_invoice_address,
       id
     );
     

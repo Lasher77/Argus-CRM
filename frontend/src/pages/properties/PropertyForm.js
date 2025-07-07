@@ -52,6 +52,7 @@ const PropertyForm = () => {
     contact_id: '',
     name: '',
     address: '',
+    alt_invoice_address: '',
     city: '',
     postal_code: '',
     country: '',
@@ -283,6 +284,19 @@ const PropertyForm = () => {
                         label="Adresse"
                         name="address"
                         value={property.address || ''}
+                        onChange={handleChange}
+                        variant="outlined"
+                        margin="normal"
+                        multiline
+                        rows={2}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Alternative Rechnungsanschrift"
+                        name="alt_invoice_address"
+                        value={property.alt_invoice_address || ''}
                         onChange={handleChange}
                         variant="outlined"
                         margin="normal"
