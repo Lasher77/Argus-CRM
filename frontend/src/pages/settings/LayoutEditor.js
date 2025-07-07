@@ -19,6 +19,7 @@ const defaultElement = () => ({
 const LayoutEditor = () => {
   const [templates, setTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [templateName, setTemplateName] = useState('');
   const [elements, setElements] = useState([]);
   const [logo, setLogo] = useState('');
 
@@ -70,7 +71,7 @@ const LayoutEditor = () => {
 
     try {
       await axios.post(`${API_URL}/templates`, {
-        name: 'Template ' + new Date().toISOString(),
+        name: templateName || 'Template ' + new Date().toISOString(),
         layout_json: JSON.stringify(layout)
       });
       alert('Template gespeichert');
@@ -83,6 +84,13 @@ const LayoutEditor = () => {
     <Box>
       <Typography variant="h4" gutterBottom>Einstellungen</Typography>
       <Box sx={{ mb: 2 }}>
+        <TextField
+          label="Vorlagenname"
+          value={templateName}
+          onChange={(e) => setTemplateName(e.target.value)}
+          size="small"
+          sx={{ mr: 2, minWidth: 200 }}
+        />
         <FormControl sx={{ mr: 2, minWidth: 200 }} size="small">
           <InputLabel id="template-select-label">Vorlage</InputLabel>
           <Select
