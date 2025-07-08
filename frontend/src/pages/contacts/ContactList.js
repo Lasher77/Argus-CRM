@@ -58,67 +58,16 @@ const ContactList = () => {
     const fetchContacts = async () => {
       try {
         setLoading(true);
-        // In einer vollständigen Implementierung würde hier ein API-Endpunkt für alle Kontakte verwendet werden
-        // Da wir diesen noch nicht implementiert haben, simulieren wir die Daten
-        // const response = await axios.get(`${API_URL}/contacts`);
-        
-        // Simulierte Daten für die Demonstration
-        const simulatedContacts = [
-          {
-            contact_id: 1,
-            account_id: 1,
-            first_name: 'Thomas',
-            last_name: 'Schmidt',
-            position: 'Geschäftsführer',
-            phone: '030 12345678',
-            mobile: '0170 1234567',
-            email: 't.schmidt@hv-schmidt.de',
-            address: 'Berliner Str. 123, 10115 Berlin',
-            is_primary_contact: 1
-          },
-          {
-            contact_id: 2,
-            account_id: 1,
-            first_name: 'Anna',
-            last_name: 'Müller',
-            position: 'Verwalterin',
-            phone: '030 12345679',
-            mobile: '0170 1234568',
-            email: 'a.mueller@hv-schmidt.de',
-            address: 'Berliner Str. 123, 10115 Berlin',
-            is_primary_contact: 0
-          },
-          {
-            contact_id: 3,
-            account_id: 2,
-            first_name: 'Julia',
-            last_name: 'Fischer',
-            position: 'Geschäftsführerin',
-            phone: '089 87654321',
-            mobile: '0171 9876543',
-            email: 'j.fischer@mueller-immobilien.de',
-            address: 'Hauptstraße 45, 80331 München',
-            is_primary_contact: 1
-          },
-          {
-            contact_id: 4,
-            account_id: 3,
-            first_name: 'Peter',
-            last_name: 'Becker',
-            position: 'Inhaber',
-            phone: '0221 9876543',
-            mobile: '0172 8765432',
-            email: 'p.becker@becker-hausverwaltung.de',
-            address: 'Gartenweg 8, 50667 Köln',
-            is_primary_contact: 1
-          }
-        ];
-        
-        setContacts(simulatedContacts);
-        setLoading(false);
+        const response = await axios.get(`${API_URL}/contacts`);
+        if (response.data.success) {
+          setContacts(response.data.data);
+        } else {
+          setError('Fehler beim Laden der Kontakte');
+        }
       } catch (err) {
         console.error('Fehler beim Abrufen der Kontakte:', err);
         setError('Fehler beim Laden der Kontakte');
+      } finally {
         setLoading(false);
       }
     };
@@ -151,11 +100,12 @@ const ContactList = () => {
   const handleDeleteContact = async (id) => {
     if (window.confirm('Sind Sie sicher, dass Sie diesen Kontakt löschen möchten?')) {
       try {
-        // In einer vollständigen Implementierung würde hier ein API-Aufruf erfolgen
-        // const response = await axios.delete(`${API_URL}/contacts/${id}`);
-        
-        // Simulierte Löschung für die Demonstration
-        setContacts(contacts.filter(contact => contact.contact_id !== id));
+        const response = await axios.delete(`${API_URL}/contacts/${id}`);
+        if (response.data.success) {
+          setContacts(contacts.filter(contact => contact.contact_id !== id));
+        } else {
+          alert('Fehler beim Löschen des Kontakts');
+        }
       } catch (err) {
         console.error('Fehler beim Löschen des Kontakts:', err);
         alert('Fehler beim Löschen des Kontakts');
