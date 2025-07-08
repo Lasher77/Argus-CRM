@@ -391,7 +391,7 @@ const QuoteForm = () => {
                           </MenuItem>
                           {properties.map((property) => (
                             <MenuItem key={property.property_id} value={property.property_id}>
-                              {`${property.street} ${property.house_number}, ${property.zip_code} ${property.city}`}
+                              {`${property.name} – ${property.address || ''}${property.postal_code ? ', ' + property.postal_code : ''} ${property.city || ''}`}
                             </MenuItem>
                           ))}
                         </Select>

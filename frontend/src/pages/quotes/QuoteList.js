@@ -206,7 +206,9 @@ const QuoteList = () => {
   // Angebote filtern
   const filteredQuotes = quotes.filter(quote => {
     const accountName = accounts[quote.account_id]?.name || '';
-    const propertyInfo = properties[quote.property_id] ? `${properties[quote.property_id].street} ${properties[quote.property_id].house_number}` : '';
+    const propertyInfo = properties[quote.property_id]
+      ? `${properties[quote.property_id].name} ${properties[quote.property_id].address || ''}`
+      : '';
     const searchTermLower = searchTerm.toLowerCase();
 
     return (
@@ -325,12 +327,12 @@ const QuoteList = () => {
                               'N/A'
                             )}
                           </TableCell>
-                          <TableCell> {/* Added Property Cell */}
+                          <TableCell>
                             {property ? (
-                               <Tooltip title={`${property.street} ${property.house_number}, ${property.zip_code} ${property.city}`}>
-                                <Chip 
+                               <Tooltip title={`${property.address || ''}${property.postal_code ? ', ' + property.postal_code : ''} ${property.city || ''}`}>
+                                <Chip
                                     icon={<HomeWorkIcon fontSize="small"/>}
-                                    label={`${property.street} ${property.house_number}`}
+                                    label={property.name}
                                     variant="outlined"
                                     clickable
                                     onClick={() => handleNavigateToProperty(quote.property_id)}

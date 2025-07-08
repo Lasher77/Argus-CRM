@@ -60,72 +60,33 @@ const PropertyList = () => {
     const fetchProperties = async () => {
       try {
         setLoading(true);
-        // In einer vollständigen Implementierung würde hier ein API-Endpunkt für alle Hausobjekte verwendet werden
-        // Da wir diesen noch nicht implementiert haben, simulieren wir die Daten
-        // const response = await axios.get(`${API_URL}/properties`);
-        
-        // Simulierte Daten für die Demonstration
-        const simulatedProperties = [
-          {
-            property_id: 1,
-            account_id: 1,
-            name: 'Wohnanlage Mitte',
-            street: 'Berliner Str.',
-            house_number: '123',
-            postal_code: '10115',
-            city: 'Berlin',
-            notes: 'Wohnanlage mit 24 Wohneinheiten, Baujahr 1998, letzte Sanierung 2018.'
-          },
-          {
-            property_id: 2,
-            account_id: 1,
-            name: 'Bürogebäude Kreuzberg',
-            street: 'Oranienstr.',
-            house_number: '45',
-            postal_code: '10997',
-            city: 'Berlin',
-            notes: 'Bürogebäude mit 12 Einheiten, Baujahr 2005.'
-          },
-          {
-            property_id: 3,
-            account_id: 2,
-            name: 'Wohnkomplex Süd',
-            street: 'Hauptstraße',
-            house_number: '45',
-            postal_code: '80331',
-            city: 'München',
-            notes: 'Wohnkomplex mit 36 Wohneinheiten und Tiefgarage.'
-          },
-          {
-            property_id: 4,
-            account_id: 3,
-            name: 'Geschäftshaus Zentrum',
-            street: 'Gartenweg',
-            house_number: '8',
-            postal_code: '50667',
-            city: 'Köln',
-            notes: 'Gemischt genutztes Objekt mit Geschäften im EG und Wohnungen in den Obergeschossen.'
-          }
-        ];
-        
-        // Simulierte Account-Namen für die Demonstration
-        const accountNames = {
-          1: 'Hausverwaltung Schmidt GmbH',
-          2: 'Immobilien Müller & Co.',
-          3: 'Hausverwaltung Becker'
-        };
-        
-        // Account-Namen zu den Hausobjekten hinzufügen
-        const propertiesWithAccountNames = simulatedProperties.map(property => ({
-          ...property,
-          account_name: accountNames[property.account_id] || 'Unbekannter Account'
-        }));
-        
-        setProperties(propertiesWithAccountNames);
-        setLoading(false);
+        const [propRes, accRes] = await Promise.all([
+          axios.get(`${API_URL}/properties`),
+          axios.get(`${API_URL}/accounts`)
+        ]);
+
+        if (propRes.data.success) {
+          const accountMap = (accRes.data.success ? accRes.data.data : []).reduce(
+            (acc, a) => {
+              acc[a.account_id] = a.name;
+              return acc;
+            },
+            {}
+          );
+
+          const propertiesWithAccountNames = propRes.data.data.map(p => ({
+            ...p,
+            account_name: accountMap[p.account_id] || 'Unbekannter Account'
+          }));
+
+          setProperties(propertiesWithAccountNames);
+        } else {
+          setError('Fehler beim Laden der Hausobjekte');
+        }
       } catch (err) {
         console.error('Fehler beim Abrufen der Hausobjekte:', err);
         setError('Fehler beim Laden der Hausobjekte');
+      } finally {
         setLoading(false);
       }
     };
@@ -158,11 +119,12 @@ const PropertyList = () => {
   const handleDeleteProperty = async (id) => {
     if (window.confirm('Sind Sie sicher, dass Sie dieses Hausobjekt löschen möchten?')) {
       try {
-        // In einer vollständigen Implementierung würde hier ein API-Aufruf erfolgen
-        // const response = await axios.delete(`${API_URL}/properties/${id}`);
-        
-        // Simulierte Löschung für die Demonstration
-        setProperties(properties.filter(property => property.property_id !== id));
+        const response = await axios.delete(`${API_URL}/properties/${id}`);
+        if (response.data.success) {
+          setProperties(properties.filter(property => property.property_id !== id));
+        } else {
+          alert('Fehler beim Löschen des Hausobjekts');
+        }
       } catch (err) {
         console.error('Fehler beim Löschen des Hausobjekts:', err);
         alert('Fehler beim Löschen des Hausobjekts');
@@ -187,10 +149,10 @@ const PropertyList = () => {
   };
 
   // Hausobjekte filtern
-  const filteredProperties = properties.filter(property => 
+  const filteredProperties = properties.filter(property =>
     property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    property.street.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    property.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (property.address && property.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (property.city && property.city.toLowerCase().includes(searchTerm.toLowerCase())) ||
     property.account_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -264,7 +226,7 @@ const PropertyList = () => {
                             {property.name}
                           </Box>
                         </TableCell>
-                        <TableCell>{`${property.street} ${property.house_number}, ${property.postal_code} ${property.city}`}</TableCell>
+                        <TableCell>{`${property.address || ''}${property.postal_code ? ', ' + property.postal_code : ''} ${property.city || ''}`}</TableCell>
                         <TableCell>
                           <Chip 
                             label={property.account_name} 
