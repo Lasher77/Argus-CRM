@@ -36,15 +36,13 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
-import axios from 'axios';
+import apiClient from '../../services/apiClient';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 
 
 // API Service für Angebote
-const API_URL = 'http://localhost:3000/api';
-
 // Styled-Komponente für den Header-Bereich
 const HeaderBox = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -121,7 +119,7 @@ const QuoteDetail = () => {
       try {
         setLoading(true);
         setError(null); // Reset error on new fetch
-        const response = await axios.get(`${API_URL}/quotes/${id}`);
+        const response = await apiClient.get(`/quotes/${id}`);
         if (response.data.success) {
           const fetchedQuote = response.data.data;
           setQuote(fetchedQuote);
@@ -146,7 +144,7 @@ const QuoteDetail = () => {
     if (quote && quote.account_id) {
       const fetchAccount = async () => {
         try {
-          const response = await axios.get(`${API_URL}/accounts/${quote.account_id}`);
+          const response = await apiClient.get(`/accounts/${quote.account_id}`);
           if (response.data.success) {
             setAccount(response.data.data);
           }
@@ -164,7 +162,7 @@ const QuoteDetail = () => {
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const res = await axios.get(`${API_URL}/templates`);
+        const res = await apiClient.get('/templates');
         if (res.data && res.data.data) {
           setTemplates(res.data.data);
           if (res.data.data.length > 0) {

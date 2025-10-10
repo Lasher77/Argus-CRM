@@ -2,6 +2,15 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import Dashboard from './pages/Dashboard';
+import ScheduleBoard from './pages/schedule/ScheduleBoard';
+import ServiceOrderList from './pages/orders/ServiceOrderList';
+import ServiceOrderDetail from './pages/orders/ServiceOrderDetail';
+import ServiceOrderForm from './pages/orders/ServiceOrderForm';
+import FieldCompanion from './pages/field/FieldCompanion';
+import MaterialOverview from './pages/materials/MaterialOverview';
+import CustomerWorkspace from './pages/customers/CustomerWorkspace';
+import InvoiceList from './pages/invoices/InvoiceList';
+import OperationsReports from './pages/reports/OperationsReports';
 
 // Account components
 import AccountList from './pages/accounts/AccountList';
@@ -30,7 +39,25 @@ function App() {
       <Route path="/" element={<MainLayout />}>
         {/* Dashboard */}
         <Route index element={<Dashboard />} />
-        
+
+        {/* Schedule */}
+        <Route path="schedule" element={<ScheduleBoard />} />
+
+        {/* Service Orders */}
+        <Route path="orders" element={<ServiceOrderList />} />
+        <Route path="orders/new" element={<ServiceOrderForm />} />
+        <Route path="orders/:id" element={<ServiceOrderDetail />} />
+        <Route path="orders/:id/edit" element={<ServiceOrderForm />} />
+
+        {/* Field Companion */}
+        <Route path="field" element={<FieldCompanion />} />
+
+        {/* Materials */}
+        <Route path="materials" element={<MaterialOverview />} />
+
+        {/* Customers workspace */}
+        <Route path="customers" element={<CustomerWorkspace />} />
+
         {/* Accounts */}
         <Route path="accounts" element={<AccountList />} />
         <Route path="accounts/:id" element={<AccountDetail />} />
@@ -55,8 +82,14 @@ function App() {
         <Route path="quotes/new" element={<QuoteForm />} />
         <Route path="quotes/edit/:id" element={<QuoteForm />} />
 
+        {/* Invoices */}
+        <Route path="invoices" element={<InvoiceList />} />
+
         {/* Settings */}
         <Route path="settings" element={<LayoutEditor />} />
+
+        {/* Reports */}
+        <Route path="reports" element={<OperationsReports />} />
 
         {/* Fallback for unknown routes */}
         <Route path="*" element={<Navigate to="/" replace />} />

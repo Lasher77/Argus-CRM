@@ -11,6 +11,11 @@ const contactRoutes = require('./routes/contactRoutes');
 const propertyRoutes = require('./routes/propertyRoutes');
 const quoteRoutes = require('./routes/quoteRoutes');
 const templateRoutes = require('./routes/templateRoutes');
+const employeeRoutes = require('./routes/employeeRoutes');
+const serviceOrderRoutes = require('./routes/serviceOrderRoutes');
+const materialRoutes = require('./routes/materialRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+const invoiceRoutes = require('./routes/invoiceRoutes');
 
 // Stellen Sie sicher, dass das Datenverzeichnis existiert
 const dataDir = path.join(__dirname, '../data');
@@ -34,18 +39,28 @@ app.use('/api', contactRoutes);
 app.use('/api', propertyRoutes);
 app.use('/api', quoteRoutes);
 app.use('/api', templateRoutes);
+app.use('/api', employeeRoutes);
+app.use('/api', serviceOrderRoutes);
+app.use('/api', materialRoutes);
+app.use('/api', reportRoutes);
+app.use('/api', invoiceRoutes);
 
 // Einfache Root-Route für API-Test
 app.get('/', (req, res) => {
   res.json({
-    message: 'Willkommen bei der CRM-Argus API',
+    message: 'Willkommen bei der WerkAssist API',
     version: '1.0.0',
     endpoints: {
       accounts: '/api/accounts',
       contacts: '/api/contacts',
       properties: '/api/properties',
       quotes: '/api/quotes',
-      templates: '/api/templates'
+      templates: '/api/templates',
+      employees: '/api/employees',
+      service_orders: '/api/service-orders',
+      materials: '/api/materials',
+      reports: '/api/reports',
+      invoices: '/api/invoices'
     }
   });
 });

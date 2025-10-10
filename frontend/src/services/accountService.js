@@ -1,13 +1,11 @@
-import axios from 'axios';
-
-const API_URL = 'http://localhost:3000/api';
+import apiClient from './apiClient';
 
 // Account-bezogene API-Aufrufe
 const AccountService = {
   // Alle Accounts abrufen
   getAllAccounts: async () => {
     try {
-      const response = await axios.get(`${API_URL}/accounts`);
+      const response = await apiClient.get('/accounts');
       return response.data;
     } catch (error) {
       console.error('Fehler beim Abrufen der Accounts:', error);
@@ -18,7 +16,7 @@ const AccountService = {
   // Account nach ID abrufen
   getAccountById: async (id) => {
     try {
-      const response = await axios.get(`${API_URL}/accounts/${id}`);
+      const response = await apiClient.get(`/accounts/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Fehler beim Abrufen des Accounts mit ID ${id}:`, error);
@@ -29,7 +27,7 @@ const AccountService = {
   // Neuen Account erstellen
   createAccount: async (accountData) => {
     try {
-      const response = await axios.post(`${API_URL}/accounts`, accountData);
+      const response = await apiClient.post('/accounts', accountData);
       return response.data;
     } catch (error) {
       console.error('Fehler beim Erstellen des Accounts:', error);
@@ -40,7 +38,7 @@ const AccountService = {
   // Account aktualisieren
   updateAccount: async (id, accountData) => {
     try {
-      const response = await axios.put(`${API_URL}/accounts/${id}`, accountData);
+      const response = await apiClient.put(`/accounts/${id}`, accountData);
       return response.data;
     } catch (error) {
       console.error(`Fehler beim Aktualisieren des Accounts mit ID ${id}:`, error);
@@ -51,7 +49,7 @@ const AccountService = {
   // Account löschen
   deleteAccount: async (id) => {
     try {
-      const response = await axios.delete(`${API_URL}/accounts/${id}`);
+      const response = await apiClient.delete(`/accounts/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Fehler beim Löschen des Accounts mit ID ${id}:`, error);
@@ -62,7 +60,7 @@ const AccountService = {
   // Kontakte eines Accounts abrufen
   getAccountContacts: async (id) => {
     try {
-      const response = await axios.get(`${API_URL}/accounts/${id}/contacts`);
+      const response = await apiClient.get(`/accounts/${id}/contacts`);
       return response.data;
     } catch (error) {
       console.error(`Fehler beim Abrufen der Kontakte für Account mit ID ${id}:`, error);
@@ -73,7 +71,7 @@ const AccountService = {
   // Hausobjekte eines Accounts abrufen
   getAccountProperties: async (id) => {
     try {
-      const response = await axios.get(`${API_URL}/accounts/${id}/properties`);
+      const response = await apiClient.get(`/accounts/${id}/properties`);
       return response.data;
     } catch (error) {
       console.error(`Fehler beim Abrufen der Hausobjekte für Account mit ID ${id}:`, error);

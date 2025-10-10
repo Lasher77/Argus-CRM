@@ -29,10 +29,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import axios from 'axios';
-
-// API Service
-const API_URL = 'http://localhost:3000/api';
+import apiClient from '../../services/apiClient';
 
 // Styled-Komponente für den Header-Bereich
 const HeaderBox = styled(Box)(({ theme }) => ({
@@ -86,7 +83,7 @@ const QuoteForm = () => {
   useEffect(() => {
     const fetchAccounts = async () => {
       try {
-        const response = await axios.get(`${API_URL}/accounts`);
+        const response = await apiClient.get('/accounts');
         if (response.data.success) {
           setAccounts(response.data.data);
         }
@@ -103,7 +100,7 @@ const QuoteForm = () => {
     if (quote.account_id) {
       const fetchProperties = async () => {
         try {
-          const response = await axios.get(`${API_URL}/accounts/${quote.account_id}/properties`);
+          const response = await apiClient.get(`/accounts/${quote.account_id}/properties`);
           if (response.data.success) {
             setProperties(response.data.data);
             // Reset property_id if the current one is not in the new list
@@ -133,7 +130,7 @@ const QuoteForm = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await axios.get(`${API_URL}/products`);
+        const response = await apiClient.get('/products');
         if (response.data.success) {
           setProducts(response.data.data);
         }
@@ -152,7 +149,7 @@ const QuoteForm = () => {
         try {
           setLoading(true);
           setError(null);
-          const response = await axios.get(`${API_URL}/quotes/${id}`);
+          const response = await apiClient.get(`/quotes/${id}`);
           if (response.data.success) {
             const fetchedData = response.data.data;
             // Stelle sicher, dass items ein Array ist
@@ -281,9 +278,9 @@ const QuoteForm = () => {
     try {
       let response;
       if (isEditMode) {
-        response = await axios.put(`${API_URL}/quotes/${id}`, submissionData);
+        response = await apiClient.put(`/quotes/${id}`, submissionData);
       } else {
-        response = await axios.post(`${API_URL}/quotes`, submissionData);
+        response = await apiClient.post('/quotes', submissionData);
       }
 
       if (response.data.success) {
