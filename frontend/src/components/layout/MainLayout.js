@@ -33,16 +33,16 @@ import SettingsIcon from '@mui/icons-material/Settings';
 
 const drawerWidth = 240;
 
-const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })(
-  ({ theme, open }) => ({
+const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' && prop !== 'isMobile' })(
+  ({ theme, open, isMobile }) => ({
     flexGrow: 1,
     padding: theme.spacing(3),
     transition: theme.transitions.create('margin', {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,
     }),
-    marginLeft: `-${drawerWidth}px`,
-    ...(open && {
+    marginLeft: isMobile ? 0 : `-${drawerWidth}px`,
+    ...(open && !isMobile && {
       transition: theme.transitions.create('margin', {
         easing: theme.transitions.easing.easeOut,
         duration: theme.transitions.duration.enteringScreen,
@@ -53,13 +53,13 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })(
 );
 
 const AppBarStyled = styled(AppBar, {
-  shouldForwardProp: (prop) => prop !== 'open',
-})(({ theme, open }) => ({
+  shouldForwardProp: (prop) => prop !== 'open' && prop !== 'isMobile',
+})(({ theme, open, isMobile }) => ({
   transition: theme.transitions.create(['margin', 'width'], {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
-  ...(open && {
+  ...(open && !isMobile && {
     width: `calc(100% - ${drawerWidth}px)`,
     marginLeft: `${drawerWidth}px`,
     transition: theme.transitions.create(['margin', 'width'], {
@@ -106,7 +106,7 @@ const MainLayout = () => {
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
-      <AppBarStyled position="fixed" open={open}>
+      <AppBarStyled position="fixed" open={open} isMobile={isMobile}>
         <Toolbar>
           <IconButton
             color="inherit"
@@ -144,7 +144,14 @@ const MainLayout = () => {
         <Divider />
         <List>
           {menuItems.map((item) => (
-            <ListItem key={item.text} disablePadding component={Link} to={item.path} sx={{ color: 'inherit', textDecoration: 'none' }}>
+            <ListItem
+              key={item.text}
+              disablePadding
+              component={Link}
+              to={item.path}
+              sx={{ color: 'inherit', textDecoration: 'none' }}
+              onClick={isMobile ? handleDrawerClose : undefined}
+            >
               <ListItemButton>
                 <ListItemIcon>
                   {item.icon}
@@ -155,7 +162,7 @@ const MainLayout = () => {
           ))}
         </List>
       </Drawer>
-      <Main open={open}>
+      <Main open={open} isMobile={isMobile}>
         <DrawerHeader />
         <Outlet /> {/* Hier wird der Inhalt der verschachtelten Routen gerendert */}
       </Main>
