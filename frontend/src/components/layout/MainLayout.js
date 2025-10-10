@@ -21,11 +21,14 @@ import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import BusinessIcon from '@mui/icons-material/Business';
-import PersonIcon from '@mui/icons-material/Person';
-import HomeIcon from '@mui/icons-material/Home';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import ChecklistIcon from '@mui/icons-material/Checklist';
+import Inventory2Icon from '@mui/icons-material/Inventory2';
+import GroupsIcon from '@mui/icons-material/Groups';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ReceiptIcon from '@mui/icons-material/Receipt';
+import BarChartIcon from '@mui/icons-material/BarChart';
 import SettingsIcon from '@mui/icons-material/Settings';
 
 const drawerWidth = 240;
@@ -89,11 +92,14 @@ const MainLayout = () => {
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-    { text: 'Accounts', icon: <BusinessIcon />, path: '/accounts' },
-    { text: 'Kontakte', icon: <PersonIcon />, path: '/contacts' },
-    { text: 'Hausobjekte', icon: <HomeIcon />, path: '/properties' },
+    { text: 'Terminplanung', icon: <CalendarMonthIcon />, path: '/schedule' },
+    { text: 'Aufträge', icon: <AssignmentIcon />, path: '/orders' },
+    { text: 'Arbeitszettel', icon: <ChecklistIcon />, path: '/field' },
+    { text: 'Material', icon: <Inventory2Icon />, path: '/materials' },
+    { text: 'Kunden', icon: <GroupsIcon />, path: '/customers' },
     { text: 'Angebote', icon: <DescriptionIcon />, path: '/quotes' },
     { text: 'Rechnungen', icon: <ReceiptIcon />, path: '/invoices' },
+    { text: 'Berichte', icon: <BarChartIcon />, path: '/reports' },
     { text: 'Einstellungen', icon: <SettingsIcon />, path: '/settings' },
   ];
 
@@ -112,7 +118,7 @@ const MainLayout = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div">
-            CRM Argus
+            WerkAssist
           </Typography>
         </Toolbar>
       </AppBarStyled>

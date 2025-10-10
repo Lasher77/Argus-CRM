@@ -27,10 +27,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import DescriptionIcon from '@mui/icons-material/Description';
 import HomeWorkIcon from '@mui/icons-material/HomeWork'; // Icon for Property
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-
-// API Service für Angebote
-const API_URL = 'http://localhost:3000/api';
+import apiClient from '../../services/apiClient';
 
 // Styled-Komponente für den Header-Bereich
 const HeaderBox = styled(Box)(({ theme }) => ({
@@ -96,9 +93,9 @@ const QuoteList = () => {
       
       // Fetch all necessary data concurrently
       const [quotesRes, accountsRes, propertiesRes] = await Promise.all([
-        axios.get(`${API_URL}/quotes`),
-        axios.get(`${API_URL}/accounts`),
-        axios.get(`${API_URL}/properties`) // Assuming an endpoint for all properties exists
+        apiClient.get('/quotes'),
+        apiClient.get('/accounts'),
+        apiClient.get('/properties') // Assuming an endpoint for all properties exists
       ]);
 
       if (quotesRes.data.success) {
@@ -167,7 +164,7 @@ const QuoteList = () => {
   const handleDeleteQuote = async (id) => {
     if (window.confirm('Sind Sie sicher, dass Sie dieses Angebot löschen möchten?')) {
       try {
-        const response = await axios.delete(`${API_URL}/quotes/${id}`);
+        const response = await apiClient.delete(`/quotes/${id}`);
         if (response.data.success) {
           // Refetch data after deletion
           fetchData(); 
