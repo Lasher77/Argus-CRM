@@ -83,6 +83,11 @@ const ServiceOrderService = {
   async clearSignature(orderId) {
     const response = await apiClient.delete(`/service-orders/${orderId}/signature`);
     return response.data.data;
+  },
+
+  async sendReport(orderId, payload) {
+    const response = await apiClient.post(`/service-orders/${orderId}/send-report`, payload);
+    return response.data;
   }
 };
 

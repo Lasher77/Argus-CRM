@@ -1,4 +1,21 @@
 const ServiceOrder = require('../models/serviceOrder');
+const emailClient = require('../utils/emailClient');
+
+const extractPdfBuffer = (pdfData) => {
+  if (!pdfData || typeof pdfData !== 'string') {
+    return null;
+  }
+
+  const base64 = pdfData.startsWith('data:')
+    ? pdfData.substring(pdfData.indexOf(',') + 1)
+    : pdfData;
+
+  try {
+    return Buffer.from(base64, 'base64');
+  } catch (error) {
+    return null;
+  }
+};
 
 const handleError = (res, error, message = 'Interner Serverfehler') => {
   console.error(message, error);
@@ -314,5 +331,58 @@ exports.clearSignature = (req, res) => {
     res.json({ success: true, data: order });
   } catch (error) {
     handleError(res, error, 'Fehler beim Entfernen der Unterschrift');
+  }
+};
+
+exports.sendServiceReport = async (req, res) => {
+  try {
+    const orderId = Number(req.params.id);
+    const order = ServiceOrder.getById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Auftrag nicht gefunden' });
+    }
+
+    const pdfBuffer = extractPdfBuffer(req.body.pdfData);
+    if (!pdfBuffer) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Ungültige oder fehlende PDF-Daten' });
+    }
+
+    const to = Array.isArray(req.body.to) ? req.body.to.filter(Boolean).join(',') : req.body.to;
+    const recipient = to || order.service_recipient_email || order.account_email;
+    if (!recipient) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Kein Empfänger für den Servicebericht definiert' });
+    }
+
+    const filename = req.body.filename || `Servicebericht-${order.order_id}.pdf`;
+    const subject = req.body.subject || `Servicebericht ${order.title || `#${order.order_id}`}`;
+    const text =
+      req.body.message ||
+      `Guten Tag,
+
+anbei erhalten Sie den Servicebericht zum Auftrag "${order.title || `#${order.order_id}`}" als PDF.
+
+Mit freundlichen Grüßen
+Ihr Serviceteam`;
+
+    await emailClient.sendMail({
+      to: recipient,
+      subject,
+      text,
+      attachments: [
+        {
+          filename,
+          content: pdfBuffer,
+          contentType: 'application/pdf',
+        },
+      ],
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    handleError(res, error, 'Servicebericht konnte nicht gesendet werden');
   }
 };

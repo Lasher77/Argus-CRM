@@ -33,6 +33,16 @@ const InvoiceService = {
 
   async deleteInvoice(id) {
     await apiClient.delete(`/invoices/${id}`);
+  },
+
+  async getInvoicesBatch(ids) {
+    const response = await apiClient.post('/invoices/batch', { ids });
+    return response.data.data;
+  },
+
+  async sendInvoice(id, payload) {
+    const response = await apiClient.post(`/invoices/${id}/send`, payload);
+    return response.data;
   }
 };
 
