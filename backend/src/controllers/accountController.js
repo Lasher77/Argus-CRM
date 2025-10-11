@@ -1,165 +1,128 @@
 // src/controllers/accountController.js
 const Account = require('../models/account');
+const { ApiError } = require('../utils/apiError');
 
 // Account Controller
 const accountController = {
   // Alle Accounts abrufen
-  getAllAccounts: (req, res) => {
+  getAllAccounts: (req, res, next) => {
     try {
       const accounts = Account.getAll();
       res.json({ success: true, data: accounts });
     } catch (error) {
-      console.error('Fehler beim Abrufen der Accounts:', error);
-      res.status(500).json({ success: false, message: 'Interner Serverfehler' });
+      next(ApiError.from(error));
     }
   },
 
   // Account nach ID abrufen
-  getAccountById: (req, res) => {
+  getAccountById: (req, res, next) => {
     try {
-      const accountId = parseInt(req.params.id, 10);
-      if (isNaN(accountId)) {
-        return res.status(400).json({ success: false, message: 'Ungültige Account-ID' });
-      }
-      const account = Account.getById(accountId);
-      
+      const account = Account.getById(req.params.id);
+
       if (!account) {
-        return res.status(404).json({ success: false, message: 'Account nicht gefunden' });
+        return next(new ApiError(404, 'Account nicht gefunden', { code: 'ACCOUNT_NOT_FOUND' }));
       }
-      
+
       res.json({ success: true, data: account });
     } catch (error) {
-      console.error('Fehler beim Abrufen des Accounts:', error);
-      res.status(500).json({ success: false, message: 'Interner Serverfehler' });
+      next(ApiError.from(error));
     }
   },
 
   // Neuen Account erstellen
-  createAccount: (req, res) => {
+  createAccount: (req, res, next) => {
     try {
-      const { name, address, phone, email, website, tax_number, notes } = req.body;
-      
-      // Validierung
-      if (!name) {
-        return res.status(400).json({ success: false, message: 'Name ist erforderlich' });
-      }
-      
-      const accountData = { name, address, phone, email, website, tax_number, notes };
-      const newAccountId = Account.create(accountData);
-      
-      res.status(201).json({ 
-        success: true, 
-        message: 'Account erfolgreich erstellt', 
-        data: { account_id: newAccountId } 
+      const newAccountId = Account.create(req.body);
+
+      res.status(201).json({
+        success: true,
+        message: 'Account erfolgreich erstellt',
+        data: { account_id: newAccountId }
       });
     } catch (error) {
-      console.error('Fehler beim Erstellen des Accounts:', error);
-      res.status(500).json({ success: false, message: 'Interner Serverfehler' });
+      next(ApiError.from(error));
     }
   },
 
   // Account aktualisieren
-  updateAccount: (req, res) => {
+  updateAccount: (req, res, next) => {
     try {
-      const accountId = parseInt(req.params.id, 10);
-      if (isNaN(accountId)) {
-        return res.status(400).json({ success: false, message: 'Ungültige Account-ID' });
-      }
-      const { name, address, phone, email, website, tax_number, notes } = req.body;
-      
-      // Validierung
-      if (!name) {
-        return res.status(400).json({ success: false, message: 'Name ist erforderlich' });
-      }
-      
       // Prüfen, ob Account existiert
-      const existingAccount = Account.getById(accountId);
+      const existingAccount = Account.getById(req.params.id);
       if (!existingAccount) {
-        return res.status(404).json({ success: false, message: 'Account nicht gefunden' });
+        return next(new ApiError(404, 'Account nicht gefunden', { code: 'ACCOUNT_NOT_FOUND' }));
       }
-      
-      const accountData = { name, address, phone, email, website, tax_number, notes };
-      const success = Account.update(accountId, accountData);
-      
+
+      const success = Account.update(req.params.id, req.body);
+
       if (success) {
         res.json({ success: true, message: 'Account erfolgreich aktualisiert' });
       } else {
-        res.status(500).json({ success: false, message: 'Fehler beim Aktualisieren des Accounts' });
+        next(
+          new ApiError(500, 'Fehler beim Aktualisieren des Accounts', {
+            code: 'ACCOUNT_UPDATE_FAILED'
+          })
+        );
       }
     } catch (error) {
-      console.error('Fehler beim Aktualisieren des Accounts:', error);
-      res.status(500).json({ success: false, message: 'Interner Serverfehler' });
+      next(ApiError.from(error));
     }
   },
 
   // Account löschen
-  deleteAccount: (req, res) => {
+  deleteAccount: (req, res, next) => {
     try {
-      const accountId = parseInt(req.params.id, 10);
-      if (isNaN(accountId)) {
-        return res.status(400).json({ success: false, message: 'Ungültige Account-ID' });
-      }
-      
       // Prüfen, ob Account existiert
-      const existingAccount = Account.getById(accountId);
+      const existingAccount = Account.getById(req.params.id);
       if (!existingAccount) {
-        return res.status(404).json({ success: false, message: 'Account nicht gefunden' });
+        return next(new ApiError(404, 'Account nicht gefunden', { code: 'ACCOUNT_NOT_FOUND' }));
       }
-      
-      const success = Account.delete(accountId);
-      
+
+      const success = Account.delete(req.params.id);
+
       if (success) {
         res.json({ success: true, message: 'Account erfolgreich gelöscht' });
       } else {
-        res.status(500).json({ success: false, message: 'Fehler beim Löschen des Accounts' });
+        next(
+          new ApiError(500, 'Fehler beim Löschen des Accounts', {
+            code: 'ACCOUNT_DELETE_FAILED'
+          })
+        );
       }
     } catch (error) {
-      console.error('Fehler beim Löschen des Accounts:', error);
-      res.status(500).json({ success: false, message: 'Interner Serverfehler' });
+      next(ApiError.from(error));
     }
   },
 
   // Kontakte eines Accounts abrufen
-  getAccountContacts: (req, res) => {
+  getAccountContacts: (req, res, next) => {
     try {
-      const accountId = parseInt(req.params.id, 10);
-      if (isNaN(accountId)) {
-        return res.status(400).json({ success: false, message: 'Ungültige Account-ID' });
-      }
-      
       // Prüfen, ob Account existiert
-      const existingAccount = Account.getById(accountId);
+      const existingAccount = Account.getById(req.params.id);
       if (!existingAccount) {
-        return res.status(404).json({ success: false, message: 'Account nicht gefunden' });
+        return next(new ApiError(404, 'Account nicht gefunden', { code: 'ACCOUNT_NOT_FOUND' }));
       }
-      
-      const contacts = Account.getContacts(accountId);
+
+      const contacts = Account.getContacts(req.params.id);
       res.json({ success: true, data: contacts });
     } catch (error) {
-      console.error('Fehler beim Abrufen der Kontakte:', error);
-      res.status(500).json({ success: false, message: 'Interner Serverfehler' });
+      next(ApiError.from(error));
     }
   },
 
   // Hausobjekte eines Accounts abrufen
-  getAccountProperties: (req, res) => {
+  getAccountProperties: (req, res, next) => {
     try {
-      const accountId = parseInt(req.params.id, 10);
-      if (isNaN(accountId)) {
-        return res.status(400).json({ success: false, message: 'Ungültige Account-ID' });
-      }
-      
       // Prüfen, ob Account existiert
-      const existingAccount = Account.getById(accountId);
+      const existingAccount = Account.getById(req.params.id);
       if (!existingAccount) {
-        return res.status(404).json({ success: false, message: 'Account nicht gefunden' });
+        return next(new ApiError(404, 'Account nicht gefunden', { code: 'ACCOUNT_NOT_FOUND' }));
       }
-      
-      const properties = Account.getProperties(accountId);
+
+      const properties = Account.getProperties(req.params.id);
       res.json({ success: true, data: properties });
     } catch (error) {
-      console.error('Fehler beim Abrufen der Hausobjekte:', error);
-      res.status(500).json({ success: false, message: 'Interner Serverfehler' });
+      next(ApiError.from(error));
     }
   }
 };
