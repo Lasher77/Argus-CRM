@@ -1,89 +1,68 @@
 // src/controllers/propertyController.js
 const Property = require('../models/property');
+const { ApiError } = require('../utils/apiError');
 
 // Alle Hausobjekte abrufen
-const getAllProperties = (req, res) => {
+const getAllProperties = (req, res, next) => {
   try {
     const properties = Property.getAll();
     res.json({ success: true, data: properties });
   } catch (err) {
-    console.error('Fehler beim Abrufen der Hausobjekte:', err);
-    res.status(500).json({ success: false, message: 'Fehler beim Laden der Hausobjekte' });
+    next(ApiError.from(err));
   }
 };
 
 // Hausobjekt nach ID abrufen
-const getPropertyById = (req, res) => {
+const getPropertyById = (req, res, next) => {
   try {
-    const propertyId = parseInt(req.params.id, 10);
-    if (isNaN(propertyId)) {
-      return res.status(400).json({ success: false, message: 'Ungültige Hausobjekt-ID' });
-    }
-    const property = Property.getById(propertyId);
+    const property = Property.getById(req.params.id);
     if (property) {
       res.json({ success: true, data: property });
     } else {
-      res.status(404).json({ success: false, message: 'Hausobjekt nicht gefunden' });
+      next(new ApiError(404, 'Hausobjekt nicht gefunden', { code: 'PROPERTY_NOT_FOUND' }));
     }
   } catch (err) {
-    console.error('Fehler beim Abrufen des Hausobjekts:', err);
-    res.status(500).json({ success: false, message: 'Fehler beim Laden des Hausobjekts' });
+    next(ApiError.from(err));
   }
 };
 
 // Hausobjekte nach Account-ID abrufen
-const getPropertiesByAccountId = (req, res) => {
+const getPropertiesByAccountId = (req, res, next) => {
   try {
-    const accountId = parseInt(req.params.accountId, 10);
-    if (isNaN(accountId)) {
-      return res.status(400).json({ success: false, message: 'Ungültige Account-ID' });
-    }
-    const properties = Property.getByAccountId(accountId);
+    const properties = Property.getByAccountId(req.params.accountId);
     res.json({ success: true, data: properties });
   } catch (err) {
-    console.error('Fehler beim Abrufen der Hausobjekte:', err);
-    res.status(500).json({ success: false, message: 'Fehler beim Laden der Hausobjekte' });
+    next(ApiError.from(err));
   }
 };
 
 // Neues Hausobjekt erstellen
-const createProperty = (req, res) => {
+const createProperty = (req, res, next) => {
   try {
     const newProperty = Property.create(req.body);
     res.status(201).json({ success: true, data: newProperty });
   } catch (err) {
-    console.error('Fehler beim Erstellen des Hausobjekts:', err);
-    res.status(500).json({ success: false, message: 'Fehler beim Erstellen des Hausobjekts' });
+    next(ApiError.from(err));
   }
 };
 
 // Hausobjekt aktualisieren
-const updateProperty = (req, res) => {
+const updateProperty = (req, res, next) => {
   try {
-    const propertyId = parseInt(req.params.id, 10);
-    if (isNaN(propertyId)) {
-      return res.status(400).json({ success: false, message: 'Ungültige Hausobjekt-ID' });
-    }
-    const updatedProperty = Property.update(propertyId, req.body);
+    const updatedProperty = Property.update(req.params.id, req.body);
     res.json({ success: true, data: updatedProperty });
   } catch (err) {
-    console.error('Fehler beim Aktualisieren des Hausobjekts:', err);
-    res.status(500).json({ success: false, message: 'Fehler beim Aktualisieren des Hausobjekts' });
+    next(ApiError.from(err));
   }
 };
 
 // Hausobjekt löschen
-const deleteProperty = (req, res) => {
+const deleteProperty = (req, res, next) => {
   try {
-    const propertyId = parseInt(req.params.id, 10);
-    if (isNaN(propertyId)) {
-      return res.status(400).json({ success: false, message: 'Ungültige Hausobjekt-ID' });
-    }
-    Property.delete(propertyId);
+    Property.delete(req.params.id);
     res.json({ success: true, message: 'Hausobjekt erfolgreich gelöscht' });
   } catch (err) {
-    console.error('Fehler beim Löschen des Hausobjekts:', err);
-    res.status(500).json({ success: false, message: 'Fehler beim Löschen des Hausobjekts' });
+    next(ApiError.from(err));
   }
 };
 

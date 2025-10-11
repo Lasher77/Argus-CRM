@@ -8,6 +8,7 @@ const {
   accessTokenExpiresIn,
   refreshTokenExpiresIn
 } = require('../config/authConfig');
+const { ApiError } = require('../utils/apiError');
 
 const sanitizeUser = (user) => {
   if (!user) {
@@ -42,24 +43,20 @@ const createRefreshToken = (user) =>
 const getRefreshExpiryDate = () =>
   new Date(Date.now() + refreshTokenExpiresIn * 1000).toISOString();
 
-exports.login = (req, res) => {
+exports.login = (req, res, next) => {
   try {
     const { username, password } = req.body;
-
-    if (!username || !password) {
-      return res.status(400).json({ success: false, message: 'Benutzername/E-Mail und Passwort erforderlich' });
-    }
 
     const user = User.findByUsernameOrEmail(username);
 
     if (!user || !user.is_active) {
-      return res.status(401).json({ success: false, message: 'Ungültige Anmeldedaten' });
+      return next(new ApiError(401, 'Ungültige Anmeldedaten', { code: 'INVALID_CREDENTIALS' }));
     }
 
     const passwordValid = bcrypt.compareSync(password, user.password_hash);
 
     if (!passwordValid) {
-      return res.status(401).json({ success: false, message: 'Ungültige Anmeldedaten' });
+      return next(new ApiError(401, 'Ungültige Anmeldedaten', { code: 'INVALID_CREDENTIALS' }));
     }
 
     const accessToken = createAccessToken(user);
@@ -78,55 +75,53 @@ exports.login = (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Fehler beim Login:', error);
-    return res.status(500).json({ success: false, message: 'Interner Serverfehler' });
+    return next(ApiError.from(error));
   }
 };
 
-exports.refresh = (req, res) => {
+exports.refresh = (req, res, next) => {
   try {
     const { refreshToken } = req.body;
-
-    if (!refreshToken) {
-      return res.status(400).json({ success: false, message: 'Refresh Token erforderlich' });
-    }
 
     const storedToken = RefreshToken.findByToken(refreshToken);
 
     if (!storedToken) {
-      return res.status(401).json({ success: false, message: 'Ungültiges Refresh Token' });
+      return next(new ApiError(401, 'Ungültiges Refresh Token', { code: 'INVALID_REFRESH_TOKEN' }));
     }
 
     try {
       jwt.verify(refreshToken, refreshTokenSecret);
     } catch (error) {
-      console.error('Fehler bei der Refresh-Token-Prüfung:', error);
       RefreshToken.deleteByToken(refreshToken);
-      return res.status(401).json({ success: false, message: 'Ungültiges oder abgelaufenes Refresh Token' });
+      return next(
+        new ApiError(401, 'Ungültiges oder abgelaufenes Refresh Token', {
+          code: 'EXPIRED_REFRESH_TOKEN'
+        })
+      );
     }
 
     if (storedToken.revoked_at) {
       RefreshToken.deleteByToken(refreshToken);
-      return res.status(401).json({ success: false, message: 'Refresh Token wurde widerrufen' });
+      return next(new ApiError(401, 'Refresh Token wurde widerrufen', { code: 'REVOKED_REFRESH_TOKEN' }));
     }
 
     if (new Date(storedToken.expires_at) <= new Date()) {
       RefreshToken.deleteByToken(refreshToken);
-      return res.status(401).json({ success: false, message: 'Refresh Token ist abgelaufen' });
+      return next(new ApiError(401, 'Refresh Token ist abgelaufen', { code: 'EXPIRED_REFRESH_TOKEN' }));
     }
 
     const payload = jwt.decode(refreshToken);
 
     if (!payload || !payload.sub) {
       RefreshToken.deleteByToken(refreshToken);
-      return res.status(401).json({ success: false, message: 'Ungültiges Refresh Token' });
+      return next(new ApiError(401, 'Ungültiges Refresh Token', { code: 'INVALID_REFRESH_TOKEN' }));
     }
 
     const user = User.findById(payload.sub);
 
     if (!user || !user.is_active) {
       RefreshToken.deleteByToken(refreshToken);
-      return res.status(401).json({ success: false, message: 'Benutzerkonto nicht aktiv' });
+      return next(new ApiError(401, 'Benutzerkonto nicht aktiv', { code: 'INACTIVE_USER' }));
     }
 
     const accessToken = createAccessToken(user);
@@ -143,24 +138,18 @@ exports.refresh = (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Fehler beim Aktualisieren des Tokens:', error);
-    return res.status(500).json({ success: false, message: 'Interner Serverfehler' });
+    return next(ApiError.from(error));
   }
 };
 
-exports.logout = (req, res) => {
+exports.logout = (req, res, next) => {
   try {
     const { refreshToken } = req.body;
-
-    if (!refreshToken) {
-      return res.status(400).json({ success: false, message: 'Refresh Token erforderlich' });
-    }
 
     RefreshToken.deleteByToken(refreshToken);
 
     return res.json({ success: true, message: 'Abmeldung erfolgreich' });
   } catch (error) {
-    console.error('Fehler beim Logout:', error);
-    return res.status(500).json({ success: false, message: 'Interner Serverfehler' });
+    return next(ApiError.from(error));
   }
 };

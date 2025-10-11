@@ -1,89 +1,68 @@
 // src/controllers/contactController.js
 const Contact = require('../models/contact');
+const { ApiError } = require('../utils/apiError');
 
 // Alle Kontakte abrufen
-const getAllContacts = (req, res) => {
+const getAllContacts = (req, res, next) => {
   try {
     const contacts = Contact.getAll();
     res.json({ success: true, data: contacts });
   } catch (err) {
-    console.error('Fehler beim Abrufen der Kontakte:', err);
-    res.status(500).json({ success: false, message: 'Fehler beim Laden der Kontakte' });
+    next(ApiError.from(err));
   }
 };
 
 // Kontakt nach ID abrufen
-const getContactById = (req, res) => {
+const getContactById = (req, res, next) => {
   try {
-    const contactId = parseInt(req.params.id, 10);
-    if (isNaN(contactId)) {
-      return res.status(400).json({ success: false, message: 'Ungültige Kontakt-ID' });
-    }
-    const contact = Contact.getById(contactId);
+    const contact = Contact.getById(req.params.id);
     if (contact) {
       res.json({ success: true, data: contact });
     } else {
-      res.status(404).json({ success: false, message: 'Kontakt nicht gefunden' });
+      next(new ApiError(404, 'Kontakt nicht gefunden', { code: 'CONTACT_NOT_FOUND' }));
     }
   } catch (err) {
-    console.error('Fehler beim Abrufen des Kontakts:', err);
-    res.status(500).json({ success: false, message: 'Fehler beim Laden des Kontakts' });
+    next(ApiError.from(err));
   }
 };
 
 // Kontakte nach Account-ID abrufen
-const getContactsByAccountId = (req, res) => {
+const getContactsByAccountId = (req, res, next) => {
   try {
-    const accountId = parseInt(req.params.accountId, 10);
-    if (isNaN(accountId)) {
-      return res.status(400).json({ success: false, message: 'Ungültige Account-ID' });
-    }
-    const contacts = Contact.getByAccountId(accountId);
+    const contacts = Contact.getByAccountId(req.params.accountId);
     res.json({ success: true, data: contacts });
   } catch (err) {
-    console.error('Fehler beim Abrufen der Kontakte:', err);
-    res.status(500).json({ success: false, message: 'Fehler beim Laden der Kontakte' });
+    next(ApiError.from(err));
   }
 };
 
 // Neuen Kontakt erstellen
-const createContact = (req, res) => {
+const createContact = (req, res, next) => {
   try {
     const newContact = Contact.create(req.body);
     res.status(201).json({ success: true, data: newContact });
   } catch (err) {
-    console.error('Fehler beim Erstellen des Kontakts:', err);
-    res.status(500).json({ success: false, message: 'Fehler beim Erstellen des Kontakts' });
+    next(ApiError.from(err));
   }
 };
 
 // Kontakt aktualisieren
-const updateContact = (req, res) => {
+const updateContact = (req, res, next) => {
   try {
-    const contactId = parseInt(req.params.id, 10);
-    if (isNaN(contactId)) {
-      return res.status(400).json({ success: false, message: 'Ungültige Kontakt-ID' });
-    }
-    const updatedContact = Contact.update(contactId, req.body);
+    const updatedContact = Contact.update(req.params.id, req.body);
     res.json({ success: true, data: updatedContact });
   } catch (err) {
-    console.error('Fehler beim Aktualisieren des Kontakts:', err);
-    res.status(500).json({ success: false, message: 'Fehler beim Aktualisieren des Kontakts' });
+    next(ApiError.from(err));
   }
 };
 
 // Kontakt löschen
-const deleteContact = (req, res) => {
+const deleteContact = (req, res, next) => {
   try {
-    const contactId = parseInt(req.params.id, 10);
-    if (isNaN(contactId)) {
-      return res.status(400).json({ success: false, message: 'Ungültige Kontakt-ID' });
-    }
-    Contact.delete(contactId);
+    Contact.delete(req.params.id);
     res.json({ success: true, message: 'Kontakt erfolgreich gelöscht' });
   } catch (err) {
-    console.error('Fehler beim Löschen des Kontakts:', err);
-    res.status(500).json({ success: false, message: 'Fehler beim Löschen des Kontakts' });
+    next(ApiError.from(err));
   }
 };
 

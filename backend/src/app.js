@@ -6,6 +6,7 @@ const morgan = require('morgan');
 const path = require('path');
 const fs = require('fs');
 const { authenticateJWT } = require('./middleware/authMiddleware');
+const { ApiError, createErrorResponse } = require('./utils/apiError');
 
 // Routen importieren
 const authRoutes = require('./routes/authRoutes');
@@ -71,18 +72,28 @@ app.get('/', (req, res) => {
 });
 
 // 404 Handler
-app.use((req, res) => {
-  res.status(404).json({ success: false, message: 'Route nicht gefunden' });
+app.use((req, res, next) => {
+  next(new ApiError(404, 'Route nicht gefunden', { code: 'ROUTE_NOT_FOUND' }));
 });
 
 // Globaler Error Handler
 app.use((err, req, res, next) => {
-  console.error('Unbehandelter Fehler:', err);
-  res.status(500).json({ 
-    success: false, 
-    message: 'Interner Serverfehler',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  const apiError = ApiError.from(err);
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.error('Unbehandelter Fehler:', err);
+  }
+
+  const statusCode = apiError.statusCode || 500;
+  const response = createErrorResponse({
+    code: apiError.code || 'INTERNAL_SERVER_ERROR',
+    message: apiError.message || 'Interner Serverfehler',
+    details:
+      apiError.details ||
+      (process.env.NODE_ENV !== 'production' && err.stack ? { stack: err.stack } : undefined)
   });
+
+  res.status(statusCode).json(response);
 });
 
 // Server starten
