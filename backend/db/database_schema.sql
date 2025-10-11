@@ -44,6 +44,8 @@ CREATE TABLE properties (
     contact_id INTEGER REFERENCES contacts(contact_id),
     notes TEXT,
     alt_invoice_address TEXT,
+    latitude NUMERIC(9, 6),
+    longitude NUMERIC(9, 6),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

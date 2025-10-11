@@ -166,7 +166,9 @@ function seedDatabase() {
         city: 'Berlin',
         country: 'Deutschland',
         notes: 'Wohnanlage mit 24 Wohneinheiten, Baujahr 1998, letzte Sanierung 2018.',
-        alt_invoice_address: null
+        alt_invoice_address: null,
+        latitude: 52.5296,
+        longitude: 13.4112
       },
       {
         account_id: 1,
@@ -177,7 +179,9 @@ function seedDatabase() {
         city: 'Berlin',
         country: 'Deutschland',
         notes: 'Bürogebäude mit 12 Einheiten, Baujahr 2005.',
-        alt_invoice_address: null
+        alt_invoice_address: null,
+        latitude: 52.5005,
+        longitude: 13.4241
       },
       {
         account_id: 2,
@@ -188,7 +192,9 @@ function seedDatabase() {
         city: 'München',
         country: 'Deutschland',
         notes: 'Wohnkomplex mit 36 Wohneinheiten und Tiefgarage.',
-        alt_invoice_address: null
+        alt_invoice_address: null,
+        latitude: 48.132,
+        longitude: 11.5663
       },
       {
         account_id: 3,
@@ -199,13 +205,39 @@ function seedDatabase() {
         city: 'Köln',
         country: 'Deutschland',
         notes: 'Gemischt genutztes Objekt mit Geschäften im EG und Wohnungen in den Obergeschossen.',
-        alt_invoice_address: null
+        alt_invoice_address: null,
+        latitude: 50.9383,
+        longitude: 6.9583
       }
     ];
 
     const insertProperty = db.prepare(`
-      INSERT INTO properties (account_id, name, address, city, postal_code, country, contact_id, notes, alt_invoice_address)
-      VALUES (@account_id, @name, @address, @city, @postal_code, @country, @contact_id, @notes, @alt_invoice_address)
+      INSERT INTO properties (
+        account_id,
+        name,
+        address,
+        city,
+        postal_code,
+        country,
+        contact_id,
+        notes,
+        alt_invoice_address,
+        latitude,
+        longitude
+      )
+      VALUES (
+        @account_id,
+        @name,
+        @address,
+        @city,
+        @postal_code,
+        @country,
+        @contact_id,
+        @notes,
+        @alt_invoice_address,
+        @latitude,
+        @longitude
+      )
     `);
     
     properties.forEach(property => {

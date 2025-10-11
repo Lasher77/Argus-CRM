@@ -5,6 +5,24 @@ const handleError = (res, error, message = 'Interner Serverfehler') => {
   res.status(500).json({ success: false, message });
 };
 
+const toRadians = (value) => (value * Math.PI) / 180;
+
+const calculateDistanceMeters = (lat1, lon1, lat2, lon2) => {
+  const earthRadius = 6371000;
+  const deltaLat = toRadians(lat2 - lat1);
+  const deltaLon = toRadians(lon2 - lon1);
+
+  const a =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(deltaLon / 2) *
+      Math.sin(deltaLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return earthRadius * c;
+};
+
 const parseStatusFilter = (statusParam) => {
   if (!statusParam) {
     return undefined;
@@ -195,6 +213,85 @@ exports.deletePhoto = (req, res) => {
     res.json({ success: true, data: order });
   } catch (error) {
     handleError(res, error, 'Fehler beim Löschen des Fotos');
+  }
+};
+
+exports.checkIn = (req, res) => {
+  try {
+    const orderId = Number(req.params.id);
+    const employeeId = Number(req.body.employee_id);
+    const latitude = Number(req.body.latitude);
+    const longitude = Number(req.body.longitude);
+
+    if (!orderId || Number.isNaN(orderId)) {
+      return res.status(400).json({ success: false, message: 'Ungültige Auftrags-ID' });
+    }
+
+    if (!employeeId || Number.isNaN(employeeId)) {
+      return res.status(400).json({ success: false, message: 'Mitarbeiter-ID ist erforderlich' });
+    }
+
+    if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
+      return res.status(400).json({ success: false, message: 'Standortdaten fehlen oder sind ungültig' });
+    }
+
+    const order = ServiceOrder.getById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Auftrag nicht gefunden' });
+    }
+
+    const targetLat = Number(order.property_latitude);
+    const targetLng = Number(order.property_longitude);
+
+    if (Number.isNaN(targetLat) || Number.isNaN(targetLng)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Für dieses Objekt sind keine Geokoordinaten hinterlegt.'
+      });
+    }
+
+    const distance = calculateDistanceMeters(latitude, longitude, targetLat, targetLng);
+    const distanceMeters = Math.round(distance);
+    const allowedRadius = 50;
+
+    if (distance > allowedRadius) {
+      return res.status(403).json({
+        success: false,
+        distanceMeters,
+        message: `Check-in nur innerhalb von ${allowedRadius} Metern möglich. Aktuelle Entfernung: ${distanceMeters} m.`
+      });
+    }
+
+    const activeEntry = order.time_entries?.find(
+      (entry) => entry.employee_id === employeeId && !entry.end_time
+    );
+
+    if (activeEntry) {
+      return res.status(409).json({
+        success: false,
+        distanceMeters,
+        message: 'Es läuft bereits eine Zeiterfassung für diesen Auftrag.'
+      });
+    }
+
+    const startTime = new Date().toISOString();
+    const updatedOrder = ServiceOrder.addTimeEntry(orderId, {
+      employee_id: employeeId,
+      start_time: startTime,
+      source: 'gps-checkin',
+      start_lat: latitude,
+      start_lng: longitude,
+      notes: req.body.notes ?? null
+    });
+
+    res.json({
+      success: true,
+      distanceMeters,
+      startedAt: startTime,
+      data: updatedOrder
+    });
+  } catch (error) {
+    handleError(res, error, 'Check-in fehlgeschlagen');
   }
 };
 

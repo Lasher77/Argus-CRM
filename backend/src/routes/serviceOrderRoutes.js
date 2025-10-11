@@ -10,6 +10,12 @@ router.put('/service-orders/:id', authorizeRoles('ADMIN', 'WORKER'), serviceOrde
 router.patch('/service-orders/:id/status', authorizeRoles('ADMIN', 'WORKER'), serviceOrderController.updateServiceOrderStatus);
 router.delete('/service-orders/:id', authorizeRoles('ADMIN', 'WORKER'), serviceOrderController.deleteServiceOrder);
 
+router.post(
+  '/service-orders/:id/check-in',
+  authorizeRoles('ADMIN', 'WORKER'),
+  serviceOrderController.checkIn
+);
+
 router.post('/service-orders/:id/time-entries', authorizeRoles('ADMIN', 'WORKER'), serviceOrderController.addTimeEntry);
 router.put('/time-entries/:entryId', authorizeRoles('ADMIN', 'WORKER'), serviceOrderController.updateTimeEntry);
 router.delete('/time-entries/:entryId', authorizeRoles('ADMIN', 'WORKER'), serviceOrderController.deleteTimeEntry);

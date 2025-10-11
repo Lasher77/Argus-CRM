@@ -10,6 +10,8 @@ const baseSelect = `
     p.address AS property_address,
     p.city AS property_city,
     p.postal_code AS property_postal_code,
+    p.latitude AS property_latitude,
+    p.longitude AS property_longitude,
     sr.first_name || ' ' || sr.last_name AS service_recipient_name,
     sr.phone AS service_recipient_phone,
     sr.email AS service_recipient_email
