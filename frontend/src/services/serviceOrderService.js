@@ -30,6 +30,11 @@ const ServiceOrderService = {
     await apiClient.delete(`/service-orders/${id}`);
   },
 
+  async checkIn(orderId, payload) {
+    const response = await apiClient.post(`/service-orders/${orderId}/check-in`, payload);
+    return response.data;
+  },
+
   async addTimeEntry(orderId, payload) {
     const response = await apiClient.post(`/service-orders/${orderId}/time-entries`, payload);
     return response.data.data;

@@ -1,6 +1,17 @@
 // db/schema.js
 const db = require('./database');
 
+const columnExists = (table, column) => {
+  const pragma = db.prepare(`PRAGMA table_info(${table})`).all();
+  return pragma.some((info) => info.name === column);
+};
+
+const ensureColumn = (table, column, definition) => {
+  if (!columnExists(table, column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+};
+
 // Funktion zum Erstellen der Tabellen
 function createTables() {
   // Accounts (Hausverwaltungen)
@@ -53,12 +64,17 @@ function createTables() {
       contact_id INTEGER,
       notes TEXT,
       alt_invoice_address TEXT,
+      latitude REAL,
+      longitude REAL,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE CASCADE,
       FOREIGN KEY (contact_id) REFERENCES contacts(contact_id)
     )
   `);
+
+  ensureColumn('properties', 'latitude', 'REAL');
+  ensureColumn('properties', 'longitude', 'REAL');
 
   // Verknüpfungstabelle Hausobjekt-Kontakt
   db.exec(`
