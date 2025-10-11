@@ -6,17 +6,17 @@ const Property = {
     const stmt = db.prepare('SELECT * FROM properties');
     return stmt.all();
   },
-  
+
   getById: (id) => {
     const stmt = db.prepare('SELECT * FROM properties WHERE property_id = ?');
     return stmt.get(id);
   },
-  
+
   getByAccountId: (accountId) => {
     const stmt = db.prepare('SELECT * FROM properties WHERE account_id = ?');
     return stmt.all(accountId);
   },
-  
+
   create: (property) => {
     const stmt = db.prepare(`
       INSERT INTO properties (
@@ -24,7 +24,7 @@ const Property = {
         account_id, contact_id, notes, alt_invoice_address
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    
+
     const result = stmt.run(
       property.name,
       property.address,
@@ -36,10 +36,10 @@ const Property = {
       property.notes,
       property.alt_invoice_address
     );
-    
+
     return { ...property, property_id: result.lastInsertRowid };
   },
-  
+
   update: (id, property) => {
     const stmt = db.prepare(`
       UPDATE properties SET
@@ -54,7 +54,7 @@ const Property = {
         alt_invoice_address = ?
       WHERE property_id = ?
     `);
-    
+
     stmt.run(
       property.name,
       property.address,
@@ -67,10 +67,10 @@ const Property = {
       property.alt_invoice_address,
       id
     );
-    
+
     return { ...property, property_id: id };
   },
-  
+
   delete: (id) => {
     const stmt = db.prepare('DELETE FROM properties WHERE property_id = ?');
     return stmt.run(id);

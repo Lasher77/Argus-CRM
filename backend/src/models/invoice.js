@@ -115,7 +115,8 @@ const Invoice = {
 
     const items = Quote.getItems(quoteId);
     const invoiceDate = data.invoice_date ?? new Date().toISOString().slice(0, 10);
-    const dueDate = data.due_date ?? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const dueDate =
+      data.due_date ?? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
     const invoice = Invoice.create({
       quote_id: quote.quote_id,

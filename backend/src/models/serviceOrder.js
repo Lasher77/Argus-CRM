@@ -172,11 +172,15 @@ const ServiceOrder = {
 
     if (filters.employeeId) {
       const employeeId = Number(filters.employeeId);
-      orders = orders.filter((order) => order.assignments.some((assignment) => assignment.employee_id === employeeId));
+      orders = orders.filter((order) =>
+        order.assignments.some((assignment) => assignment.employee_id === employeeId)
+      );
     }
 
     if (filters.onlyActive) {
-      orders = orders.filter((order) => order.status !== 'completed' && order.status !== 'cancelled');
+      orders = orders.filter(
+        (order) => order.status !== 'completed' && order.status !== 'cancelled'
+      );
     }
 
     return orders;
@@ -351,7 +355,8 @@ const ServiceOrder = {
         `);
 
         payload.time_entries.forEach((entry) => {
-          const duration = entry.duration_minutes ?? calculateDuration(entry.start_time, entry.end_time);
+          const duration =
+            entry.duration_minutes ?? calculateDuration(entry.start_time, entry.end_time);
           timeStmt.run({
             order_id: orderId,
             employee_id: entry.employee_id,
@@ -485,14 +490,16 @@ const ServiceOrder = {
       if (payload.signature === null) {
         db.prepare('DELETE FROM order_signatures WHERE order_id = ?').run(id);
       } else if (payload.signature && payload.signature.signature_data) {
-        db.prepare(`
+        db.prepare(
+          `
           INSERT INTO order_signatures (order_id, signed_by, signed_at, signature_data)
           VALUES (@order_id, @signed_by, @signed_at, @signature_data)
           ON CONFLICT(order_id) DO UPDATE SET
             signed_by = excluded.signed_by,
             signed_at = excluded.signed_at,
             signature_data = excluded.signature_data
-        `).run({
+        `
+        ).run({
           order_id: id,
           signed_by: payload.signature.signed_by ?? null,
           signed_at: payload.signature.signed_at ?? new Date().toISOString(),
@@ -616,12 +623,16 @@ const ServiceOrder = {
       return null;
     }
 
-    const orderId = db.prepare('SELECT order_id FROM time_entries WHERE time_entry_id = ?').get(timeEntryId)?.order_id;
+    const orderId = db
+      .prepare('SELECT order_id FROM time_entries WHERE time_entry_id = ?')
+      .get(timeEntryId)?.order_id;
     return orderId ? ServiceOrder.getById(orderId) : null;
   },
 
   deleteTimeEntry: (timeEntryId) => {
-    const orderIdRow = db.prepare('SELECT order_id FROM time_entries WHERE time_entry_id = ?').get(timeEntryId);
+    const orderIdRow = db
+      .prepare('SELECT order_id FROM time_entries WHERE time_entry_id = ?')
+      .get(timeEntryId);
     if (!orderIdRow) {
       return null;
     }
@@ -694,12 +705,16 @@ const ServiceOrder = {
       return null;
     }
 
-    const orderRow = db.prepare('SELECT order_id FROM material_usage WHERE usage_id = ?').get(usageId);
+    const orderRow = db
+      .prepare('SELECT order_id FROM material_usage WHERE usage_id = ?')
+      .get(usageId);
     return orderRow ? ServiceOrder.getById(orderRow.order_id) : null;
   },
 
   deleteMaterialUsage: (usageId) => {
-    const orderRow = db.prepare('SELECT order_id FROM material_usage WHERE usage_id = ?').get(usageId);
+    const orderRow = db
+      .prepare('SELECT order_id FROM material_usage WHERE usage_id = ?')
+      .get(usageId);
     if (!orderRow) {
       return null;
     }
@@ -740,7 +755,9 @@ const ServiceOrder = {
   },
 
   deletePhoto: (photoId) => {
-    const orderRow = db.prepare('SELECT order_id FROM order_photos WHERE photo_id = ?').get(photoId);
+    const orderRow = db
+      .prepare('SELECT order_id FROM order_photos WHERE photo_id = ?')
+      .get(photoId);
     if (!orderRow) {
       return null;
     }
@@ -790,12 +807,16 @@ const ServiceOrder = {
   },
 
   getUpcomingForDate: (date) => {
-    const stmt = db.prepare(`${baseSelect} WHERE date(so.planned_date) = date(?) ORDER BY so.planned_start`);
+    const stmt = db.prepare(
+      `${baseSelect} WHERE date(so.planned_date) = date(?) ORDER BY so.planned_start`
+    );
     return stmt.all(date).map(hydrateOrder);
   },
 
   getOpenOrders: () => {
-    const stmt = db.prepare(`${baseSelect} WHERE so.status NOT IN ('completed', 'cancelled') ORDER BY so.planned_date`);
+    const stmt = db.prepare(
+      `${baseSelect} WHERE so.status NOT IN ('completed', 'cancelled') ORDER BY so.planned_date`
+    );
     return stmt.all().map(hydrateOrder);
   }
 };
