@@ -1,11 +1,14 @@
 // src/app.js
+require('./config/env');
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const path = require('path');
 const fs = require('fs');
+const { authenticateJWT } = require('./middleware/authMiddleware');
 
 // Routen importieren
+const authRoutes = require('./routes/authRoutes');
 const accountRoutes = require('./routes/accountRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const propertyRoutes = require('./routes/propertyRoutes');
@@ -34,6 +37,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev')); // Logging
 
 // API-Routen
+app.use('/api/auth', authRoutes);
+app.use('/api', authenticateJWT);
 app.use('/api', accountRoutes);
 app.use('/api', contactRoutes);
 app.use('/api', propertyRoutes);

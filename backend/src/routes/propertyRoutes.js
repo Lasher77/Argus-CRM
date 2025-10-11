@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const propertyController = require('../controllers/propertyController');
+const { authorizeRoles } = require('../middleware/authMiddleware');
 
 // Alle Hausobjekte abrufen
 router.get('/properties', propertyController.getAllProperties);
@@ -13,12 +14,12 @@ router.get('/properties/:id', propertyController.getPropertyById);
 router.get('/accounts/:accountId/properties', propertyController.getPropertiesByAccountId);
 
 // Neues Hausobjekt erstellen
-router.post('/properties', propertyController.createProperty);
+router.post('/properties', authorizeRoles('ADMIN'), propertyController.createProperty);
 
 // Hausobjekt aktualisieren
-router.put('/properties/:id', propertyController.updateProperty);
+router.put('/properties/:id', authorizeRoles('ADMIN'), propertyController.updateProperty);
 
 // Hausobjekt löschen
-router.delete('/properties/:id', propertyController.deleteProperty);
+router.delete('/properties/:id', authorizeRoles('ADMIN'), propertyController.deleteProperty);
 
 module.exports = router;

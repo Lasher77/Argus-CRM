@@ -1,6 +1,7 @@
 // db/seed.js
 const db = require('./database');
 const initDatabase = require('./init.js');
+const bcrypt = require('bcryptjs');
 
 // Funktion zum Einfügen von Testdaten
 function seedDatabase() {
@@ -9,6 +10,45 @@ function seedDatabase() {
     initDatabase(true);
     
     console.log('Füge Testdaten ein...');
+
+    const hashPassword = (password) => bcrypt.hashSync(password, 10);
+
+    const authUsers = [
+      {
+        username: 'admin',
+        email: 'admin@example.com',
+        password_hash: hashPassword('admin123'),
+        first_name: 'System',
+        last_name: 'Administrator',
+        role: 'ADMIN',
+        is_active: 1
+      },
+      {
+        username: 'accounting',
+        email: 'accounting@example.com',
+        password_hash: hashPassword('accounting123'),
+        first_name: 'Alex',
+        last_name: 'Accounting',
+        role: 'ACCOUNTING',
+        is_active: 1
+      },
+      {
+        username: 'worker',
+        email: 'worker@example.com',
+        password_hash: hashPassword('worker123'),
+        first_name: 'Will',
+        last_name: 'Worker',
+        role: 'WORKER',
+        is_active: 1
+      }
+    ];
+
+    const insertAuthUser = db.prepare(`
+      INSERT INTO users (username, email, password_hash, first_name, last_name, role, is_active)
+      VALUES (@username, @email, @password_hash, @first_name, @last_name, @role, @is_active)
+    `);
+
+    authUsers.forEach(user => insertAuthUser.run(user));
     
     // Accounts einfügen
     const accounts = [
