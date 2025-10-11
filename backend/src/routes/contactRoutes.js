@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const contactController = require('../controllers/contactController');
+const { authorizeRoles } = require('../middleware/authMiddleware');
 
 // Alle Kontakte abrufen
 router.get('/contacts', contactController.getAllContacts);
@@ -13,12 +14,12 @@ router.get('/contacts/:id', contactController.getContactById);
 router.get('/accounts/:accountId/contacts', contactController.getContactsByAccountId);
 
 // Neuen Kontakt erstellen
-router.post('/contacts', contactController.createContact);
+router.post('/contacts', authorizeRoles('ADMIN'), contactController.createContact);
 
 // Kontakt aktualisieren
-router.put('/contacts/:id', contactController.updateContact);
+router.put('/contacts/:id', authorizeRoles('ADMIN'), contactController.updateContact);
 
 // Kontakt löschen
-router.delete('/contacts/:id', contactController.deleteContact);
+router.delete('/contacts/:id', authorizeRoles('ADMIN'), contactController.deleteContact);
 
 module.exports = router;

@@ -352,11 +352,23 @@ function createTables() {
       password_hash TEXT NOT NULL,
       first_name TEXT,
       last_name TEXT,
-      role TEXT NOT NULL DEFAULT 'user',
+      role TEXT NOT NULL DEFAULT 'WORKER',
       is_active INTEGER DEFAULT 1,
       last_login TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS refresh_tokens (
+      token_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      token TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      revoked_at TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
     )
   `);
 
@@ -385,6 +397,7 @@ function createTables() {
     CREATE INDEX IF NOT EXISTS idx_time_entries_order_id ON time_entries(order_id);
     CREATE INDEX IF NOT EXISTS idx_time_entries_employee_id ON time_entries(employee_id);
     CREATE INDEX IF NOT EXISTS idx_material_usage_order_id ON material_usage(order_id);
+    CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
   `);
 
   console.log('Datenbanktabellen wurden erfolgreich erstellt.');
@@ -410,6 +423,7 @@ function dropTables() {
     'employees',
     'products',
     'pdf_templates',
+    'refresh_tokens',
     'users',
     'accounts'
   ];

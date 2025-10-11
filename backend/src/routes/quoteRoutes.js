@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const quoteController = require('../controllers/quoteController');
+const { authorizeRoles } = require('../middleware/authMiddleware');
 
 // Alle Angebote abrufen
 router.get('/quotes', quoteController.getAllQuotes);
@@ -13,22 +14,22 @@ router.get('/quotes/:id', quoteController.getQuoteById);
 router.get('/accounts/:accountId/quotes', quoteController.getQuotesByAccountId);
 
 // Neues Angebot erstellen
-router.post('/quotes', quoteController.createQuote);
+router.post('/quotes', authorizeRoles('ACCOUNTING', 'ADMIN'), quoteController.createQuote);
 
 // Angebot aktualisieren
-router.put('/quotes/:id', quoteController.updateQuote);
+router.put('/quotes/:id', authorizeRoles('ACCOUNTING', 'ADMIN'), quoteController.updateQuote);
 
 // Angebot löschen
-router.delete('/quotes/:id', quoteController.deleteQuote);
+router.delete('/quotes/:id', authorizeRoles('ACCOUNTING', 'ADMIN'), quoteController.deleteQuote);
 
 // Angebotsposition hinzufügen
-router.post('/quotes/:quoteId/items', quoteController.addQuoteItem);
+router.post('/quotes/:quoteId/items', authorizeRoles('ACCOUNTING', 'ADMIN'), quoteController.addQuoteItem);
 
 // Angebotsposition aktualisieren
-router.put('/quotes/items/:itemId', quoteController.updateQuoteItem);
+router.put('/quotes/items/:itemId', authorizeRoles('ACCOUNTING', 'ADMIN'), quoteController.updateQuoteItem);
 
 // Angebotsposition löschen
-router.delete('/quotes/items/:itemId', quoteController.deleteQuoteItem);
+router.delete('/quotes/items/:itemId', authorizeRoles('ACCOUNTING', 'ADMIN'), quoteController.deleteQuoteItem);
 
 // Angebotspositionen nach Angebots-ID abrufen (NEUE ROUTE)
 router.get('/quotes/:id/items', quoteController.getQuoteById);
