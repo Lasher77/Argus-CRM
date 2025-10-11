@@ -6,17 +6,17 @@ const Contact = {
     const stmt = db.prepare('SELECT * FROM contacts');
     return stmt.all();
   },
-  
+
   getById: (id) => {
     const stmt = db.prepare('SELECT * FROM contacts WHERE contact_id = ?');
     return stmt.get(id);
   },
-  
+
   getByAccountId: (accountId) => {
     const stmt = db.prepare('SELECT * FROM contacts WHERE account_id = ?');
     return stmt.all(accountId);
   },
-  
+
   create: (contact) => {
     const stmt = db.prepare(`
       INSERT INTO contacts (
@@ -24,7 +24,7 @@ const Contact = {
         address, birthday, is_primary_contact, account_id, notes
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    
+
     const result = stmt.run(
       contact.first_name,
       contact.last_name,
@@ -38,10 +38,10 @@ const Contact = {
       contact.account_id,
       contact.notes
     );
-    
+
     return { ...contact, contact_id: result.lastInsertRowid };
   },
-  
+
   update: (id, contact) => {
     const stmt = db.prepare(`
       UPDATE contacts SET
@@ -58,7 +58,7 @@ const Contact = {
         notes = ?
       WHERE contact_id = ?
     `);
-    
+
     stmt.run(
       contact.first_name,
       contact.last_name,
@@ -73,10 +73,10 @@ const Contact = {
       contact.notes,
       id
     );
-    
+
     return { ...contact, contact_id: id };
   },
-  
+
   delete: (id) => {
     const stmt = db.prepare('DELETE FROM contacts WHERE contact_id = ?');
     return stmt.run(id);

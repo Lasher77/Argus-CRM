@@ -45,7 +45,7 @@ const Account = {
           updated_at = datetime('now')
       WHERE account_id = @account_id
     `);
-    
+
     const params = { ...accountData, account_id: id };
     const result = stmt.run(params);
     return result.changes > 0;
