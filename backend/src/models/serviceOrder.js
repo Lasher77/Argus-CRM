@@ -5,6 +5,7 @@ const baseSelect = `
     so.*,
     a.name AS account_name,
     a.address AS account_address,
+    a.email AS account_email,
     ia.name AS invoice_account_name,
     p.name AS property_name,
     p.address AS property_address,

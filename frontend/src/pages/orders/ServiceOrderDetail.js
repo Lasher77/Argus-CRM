@@ -25,9 +25,12 @@ import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import BrushIcon from '@mui/icons-material/Brush';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import SendIcon from '@mui/icons-material/Send';
 import ServiceOrderService from '../../services/serviceOrderService';
 import EmployeeService from '../../services/employeeService';
 import MaterialService from '../../services/materialService';
+import { createServiceReportPdf, pdfToDataUri } from '../../utils/pdfUtils';
 
 const SectionCard = styled(Card)(({ theme }) => ({
   height: '100%',
@@ -78,6 +81,7 @@ const ServiceOrderDetail = () => {
     signed_by: '',
     signature_data: ''
   });
+  const [sendingReport, setSendingReport] = useState(false);
 
   const loadOrder = async () => {
     try {
@@ -256,6 +260,48 @@ const ServiceOrderDetail = () => {
     }
   };
 
+  const handleDownloadReport = () => {
+    if (!order) {
+      return;
+    }
+
+    const doc = createServiceReportPdf(order);
+    doc.save(`Servicebericht-${order.order_id}.pdf`);
+  };
+
+  const handleSendReport = async () => {
+    if (!order || sendingReport) {
+      return;
+    }
+
+    const defaultRecipient = order.service_recipient_email || order.account_email || '';
+    const to = window.prompt('Empfänger E-Mail-Adresse', defaultRecipient);
+    if (!to) {
+      return;
+    }
+
+    try {
+      setSendingReport(true);
+      const doc = createServiceReportPdf(order);
+      const pdfData = pdfToDataUri(doc);
+      await ServiceOrderService.sendReport(order.order_id, {
+        to,
+        pdfData,
+        filename: `Servicebericht-${order.order_id}.pdf`,
+        subject: `Servicebericht ${order.title || `#${order.order_id}`}`,
+        message: `Guten Tag,\n\nanbei erhalten Sie den Servicebericht zum Auftrag "${
+          order.title || `#${order.order_id}`
+        }".\n\nMit freundlichen Grüßen\nIhr Serviceteam`,
+      });
+      window.alert('Servicebericht wurde versendet.');
+    } catch (error) {
+      console.error('Servicebericht konnte nicht gesendet werden', error);
+      window.alert('Servicebericht konnte nicht gesendet werden. Bitte versuchen Sie es erneut.');
+    } finally {
+      setSendingReport(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
@@ -283,6 +329,18 @@ const ServiceOrderDetail = () => {
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
           <Button variant="outlined" startIcon={<EditIcon />} onClick={() => navigate(`/orders/${order.order_id}/edit`)}>
             Bearbeiten
+          </Button>
+          <Button variant="outlined" startIcon={<PictureAsPdfIcon />} onClick={handleDownloadReport}>
+            Servicebericht (PDF)
+          </Button>
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<SendIcon />}
+            disabled={sendingReport}
+            onClick={handleSendReport}
+          >
+            Als PDF senden
           </Button>
           {order.status !== 'completed' && (
             <Button variant="contained" startIcon={<CheckCircleIcon />} onClick={() => handleStatusChange('completed')}>

@@ -5,8 +5,10 @@ const baseSelect = `
   SELECT
     i.*,
     a.name AS account_name,
+    a.email AS account_email,
     p.name AS property_name,
-    c.first_name || ' ' || c.last_name AS contact_name
+    c.first_name || ' ' || c.last_name AS contact_name,
+    c.email AS contact_email
   FROM invoices i
   JOIN accounts a ON i.account_id = a.account_id
   LEFT JOIN properties p ON i.property_id = p.property_id
@@ -51,6 +53,23 @@ const Invoice = {
     const stmt = db.prepare(`${baseSelect} WHERE i.invoice_id = ?`);
     const row = stmt.get(id);
     return hydrateInvoice(row);
+  },
+
+  getByIds: (ids = []) => {
+    if (!Array.isArray(ids) || !ids.length) {
+      return [];
+    }
+
+    const uniqueIds = Array.from(new Set(ids.map((value) => Number(value)).filter((value) => !Number.isNaN(value))));
+    if (!uniqueIds.length) {
+      return [];
+    }
+
+    const placeholders = uniqueIds.map(() => '?').join(', ');
+    const stmt = db.prepare(`${baseSelect} WHERE i.invoice_id IN (${placeholders})`);
+    const rows = stmt.all(...uniqueIds).map(hydrateInvoice);
+
+    return uniqueIds.map((id) => rows.find((invoice) => invoice.invoice_id === id)).filter(Boolean);
   },
 
   create: (data) => {

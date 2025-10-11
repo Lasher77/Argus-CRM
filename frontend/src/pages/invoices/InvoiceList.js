@@ -29,9 +29,12 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import PaidIcon from '@mui/icons-material/Paid';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import SendIcon from '@mui/icons-material/Send';
 import dayjs from 'dayjs';
 import { Link as RouterLink } from 'react-router-dom';
 import InvoiceService from '../../services/invoiceService';
+import { createInvoicePdf, pdfToDataUri } from '../../utils/pdfUtils';
 
 const statusOptions = [
   { value: '', label: 'Alle Status' },
@@ -86,6 +89,7 @@ const InvoiceList = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [pendingStatus, setPendingStatus] = useState({});
+  const [sendingInvoices, setSendingInvoices] = useState({});
 
   const loadInvoices = async () => {
     try {
@@ -122,6 +126,47 @@ const InvoiceList = () => {
       setError('Status konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.');
       setPendingStatus((prev) => {
         const { [invoiceId]: _discarded, ...rest } = prev;
+        return rest;
+      });
+    }
+  };
+
+  const handleDownloadInvoice = (invoice) => {
+    const doc = createInvoicePdf(invoice);
+    doc.save(`Rechnung-${invoice.invoice_number || invoice.invoice_id}.pdf`);
+  };
+
+  const handleSendInvoice = async (invoice) => {
+    if (sendingInvoices[invoice.invoice_id]) {
+      return;
+    }
+
+    const defaultRecipient = invoice.contact_email || invoice.account_email || '';
+    const to = window.prompt('Empfänger E-Mail-Adresse', defaultRecipient);
+    if (!to) {
+      return;
+    }
+
+    try {
+      setSendingInvoices((prev) => ({ ...prev, [invoice.invoice_id]: true }));
+      const doc = createInvoicePdf(invoice);
+      const pdfData = pdfToDataUri(doc);
+      await InvoiceService.sendInvoice(invoice.invoice_id, {
+        to,
+        pdfData,
+        filename: `Rechnung-${invoice.invoice_number || invoice.invoice_id}.pdf`,
+        subject: `Rechnung ${invoice.invoice_number || `#${invoice.invoice_id}`}`,
+        message: `Guten Tag,\n\nanbei erhalten Sie die Rechnung ${
+          invoice.invoice_number || `#${invoice.invoice_id}`
+        } als PDF.\n\nMit freundlichen Grüßen\nIhr Serviceteam`,
+      });
+      window.alert('Rechnung wurde versendet.');
+    } catch (error) {
+      console.error('Rechnung konnte nicht gesendet werden', error);
+      window.alert('Rechnung konnte nicht gesendet werden. Bitte versuchen Sie es erneut.');
+    } finally {
+      setSendingInvoices((prev) => {
+        const { [invoice.invoice_id]: _discarded, ...rest } = prev;
         return rest;
       });
     }
@@ -419,18 +464,38 @@ const InvoiceList = () => {
                             </Typography>
                           </TableCell>
                           <TableCell align="center">
-                            <Tooltip title="Verknüpftes Angebot öffnen">
-                              <span>
-                                <IconButton
-                                  component={invoice.quote_id ? RouterLink : 'button'}
-                                  to={invoice.quote_id ? `/quotes/${invoice.quote_id}` : undefined}
-                                  disabled={!invoice.quote_id}
-                                  size="small"
-                                >
-                                  <DescriptionIcon fontSize="small" />
-                                </IconButton>
-                              </span>
-                            </Tooltip>
+                            <Stack direction="row" spacing={1} justifyContent="center">
+                              <Tooltip title="Rechnung als PDF speichern">
+                                <span>
+                                  <IconButton size="small" onClick={() => handleDownloadInvoice(invoice)}>
+                                    <PictureAsPdfIcon fontSize="small" />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                              <Tooltip title="Rechnung als PDF senden">
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleSendInvoice(invoice)}
+                                    disabled={Boolean(sendingInvoices[invoice.invoice_id])}
+                                  >
+                                    <SendIcon fontSize="small" />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                              <Tooltip title="Verknüpftes Angebot öffnen">
+                                <span>
+                                  <IconButton
+                                    component={invoice.quote_id ? RouterLink : 'button'}
+                                    to={invoice.quote_id ? `/quotes/${invoice.quote_id}` : undefined}
+                                    disabled={!invoice.quote_id}
+                                    size="small"
+                                  >
+                                    <DescriptionIcon fontSize="small" />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                            </Stack>
                           </TableCell>
                         </TableRow>
                       );

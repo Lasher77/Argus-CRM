@@ -29,5 +29,10 @@ router.delete('/service-orders/:id/photos/:photoId', authorizeRoles('ADMIN', 'WO
 
 router.post('/service-orders/:id/signature', authorizeRoles('ADMIN', 'WORKER'), serviceOrderController.setSignature);
 router.delete('/service-orders/:id/signature', authorizeRoles('ADMIN', 'WORKER'), serviceOrderController.clearSignature);
+router.post(
+  '/service-orders/:id/send-report',
+  authorizeRoles('ADMIN', 'WORKER'),
+  serviceOrderController.sendServiceReport
+);
 
 module.exports = router;
