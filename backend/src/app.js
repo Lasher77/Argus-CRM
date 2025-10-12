@@ -11,6 +11,7 @@ const initDatabase = require('../db/init');
 initDatabase();
 
 // Routen importieren
+const setupRoutes = require('./routes/setupRoutes');
 const authRoutes = require('./routes/authRoutes');
 const accountRoutes = require('./routes/accountRoutes');
 const contactRoutes = require('./routes/contactRoutes');
@@ -41,6 +42,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev')); // Logging
 
 // API-Routen
+app.use('/api/setup', setupRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api', authenticateJWT);
 app.use('/api', accountRoutes);

@@ -376,6 +376,16 @@ function createTables() {
     )
   `);
 
+  // Systemeinstellungen
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS system_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS refresh_tokens (
       token_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -442,6 +452,7 @@ function dropTables() {
     'products',
     'pdf_templates',
     'refresh_tokens',
+    'system_settings',
     'users',
     'accounts'
   ];
