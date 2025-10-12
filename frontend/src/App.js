@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
+import RequireAuth from './components/auth/RequireAuth';
 import Dashboard from './pages/Dashboard';
 import ScheduleBoard from './pages/schedule/ScheduleBoard';
 import ServiceOrderList from './pages/orders/ServiceOrderList';
@@ -32,11 +33,20 @@ import QuoteList from './pages/quotes/QuoteList';
 import QuoteDetail from './pages/quotes/QuoteDetail';
 import QuoteForm from './pages/quotes/QuoteForm';
 import LayoutEditor from './pages/settings/LayoutEditor';
+import Login from './pages/Login';
 
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<MainLayout />}>
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="/"
+        element={(
+          <RequireAuth>
+            <MainLayout />
+          </RequireAuth>
+        )}
+      >
         {/* Dashboard */}
         <Route index element={<Dashboard />} />
 

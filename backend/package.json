@@ -5,10 +5,13 @@
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
+    "start:test": "cross-env NODE_ENV=test TEST_DB_PATH=./data/e2e-test.db node scripts/startTestServer.js",
     "dev": "nodemon src/app.js",
     "init-db": "node db/init.js",
     "seed-db": "node db/seed.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "cross-env NODE_ENV=test jest --runInBand",
+    "test:watch": "cross-env NODE_ENV=test jest --watch",
+    "test:coverage": "cross-env NODE_ENV=test jest --coverage"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.609.0",
@@ -24,6 +27,9 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "cross-env": "^7.0.3",
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.1",
+    "supertest": "^6.3.4"
   }
 }
