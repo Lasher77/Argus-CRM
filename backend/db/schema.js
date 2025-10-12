@@ -416,7 +416,9 @@ function createTables() {
     CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
   `);
 
-  console.log('Datenbanktabellen wurden erfolgreich erstellt.');
+  if (process.env.NODE_ENV !== 'test') {
+    console.log('Datenbanktabellen wurden erfolgreich erstellt.');
+  }
 }
 
 // Funktion zum Löschen aller Tabellen (für Testzwecke)
@@ -452,7 +454,9 @@ function dropTables() {
   
   db.pragma('foreign_keys = ON');
   
-  console.log('Alle Tabellen wurden gelöscht.');
+  if (process.env.NODE_ENV !== 'test') {
+    console.log('Alle Tabellen wurden gelöscht.');
+  }
 }
 
 module.exports = {

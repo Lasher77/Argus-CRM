@@ -7,6 +7,8 @@ const path = require('path');
 const fs = require('fs');
 const { authenticateJWT } = require('./middleware/authMiddleware');
 const { ApiError, createErrorResponse } = require('./utils/apiError');
+const initDatabase = require('../db/init');
+initDatabase();
 
 // Routen importieren
 const authRoutes = require('./routes/authRoutes');
@@ -82,7 +84,7 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
   const apiError = ApiError.from(err);
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
     console.error('Unbehandelter Fehler:', err);
   }
 
@@ -92,15 +94,19 @@ app.use((err, req, res, next) => {
     message: apiError.message || 'Interner Serverfehler',
     details:
       apiError.details ||
-      (process.env.NODE_ENV !== 'production' && err.stack ? { stack: err.stack } : undefined)
+      (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test' && err.stack
+        ? { stack: err.stack }
+        : undefined)
   });
 
   res.status(statusCode).json(response);
 });
 
-// Server starten
-app.listen(PORT, () => {
-  console.log(`Server läuft auf http://localhost:${PORT}`);
-});
+// Server starten, wenn Datei direkt ausgeführt wird
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server läuft auf http://localhost:${PORT}`);
+  });
+}
 
 module.exports = app;

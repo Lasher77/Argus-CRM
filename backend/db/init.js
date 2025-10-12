@@ -12,15 +12,21 @@ if (!fs.existsSync(dataDir)) {
 // Initialisiere die Datenbank
 function initDatabase(reset = false) {
   try {
+    const log = (...args) => {
+      if (process.env.NODE_ENV !== 'test') {
+        console.log(...args);
+      }
+    };
+
     if (reset) {
-      console.log('Lösche bestehende Tabellen...');
+      log('Lösche bestehende Tabellen...');
       dropTables();
     }
-    
-    console.log('Erstelle Datenbankschema...');
+
+    log('Erstelle Datenbankschema...');
     createTables();
-    
-    console.log('Datenbank wurde erfolgreich initialisiert!');
+
+    log('Datenbank wurde erfolgreich initialisiert!');
   } catch (error) {
     console.error('Fehler bei der Datenbankinitialisierung:', error);
     process.exit(1);

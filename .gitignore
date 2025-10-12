@@ -16,3 +16,8 @@ node_modules/
 
 # Generated PWA assets
 frontend/public/icons/
+
+# Playwright artifacts
+frontend/test-results/
+frontend/playwright-report/
+frontend/tests/e2e/*-snapshots/
