@@ -1,7 +1,22 @@
 import axios from 'axios';
 
+const trimTrailingSlash = (url) => url?.replace(/\/+$/, '');
+
+const resolveBaseURL = () => {
+  const envUrl = trimTrailingSlash(process.env.REACT_APP_API_URL);
+  if (envUrl) {
+    return envUrl;
+  }
+
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return `${trimTrailingSlash(window.location.origin)}/api`;
+  }
+
+  return '/api';
+};
+
 const apiClient = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3000/api',
+  baseURL: resolveBaseURL(),
 });
 
 const getAccessToken = () => {
