@@ -43,3 +43,13 @@ exports.getRevenueByMonth = (req, res) => {
     handleError(res, error, 'Fehler beim Berechnen der Umsätze');
   }
 };
+
+exports.getServiceOrderReport = (req, res) => {
+  try {
+    const { from, to, accountId, propertyId } = req.query;
+    const report = Report.getServiceOrderReport({ from, to, accountId, propertyId });
+    res.json({ success: true, data: report });
+  } catch (error) {
+    handleError(res, error, 'Fehler beim Erstellen des Auftragsreports');
+  }
+};

@@ -13,6 +13,21 @@ const AccountService = {
     }
   },
 
+  searchAccounts: async (query, options = {}) => {
+    try {
+      const response = await apiClient.get('/accounts/search', {
+        params: {
+          q: query,
+          limit: options.limit
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Fehler bei der Suche nach Accounts:', error);
+      throw error;
+    }
+  },
+
   // Account nach ID abrufen
   getAccountById: async (id) => {
     try {

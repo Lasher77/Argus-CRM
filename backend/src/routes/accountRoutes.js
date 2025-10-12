@@ -8,6 +8,7 @@ const { createAccountSchema, updateAccountSchema } = require('../validation/sche
 const { idParamSchema } = require('../validation/schemas/commonSchemas');
 
 // Account Routen
+router.get('/accounts/search', accountController.searchAccounts);
 router.get('/accounts', accountController.getAllAccounts);
 router.get('/accounts/:id', validate(idParamSchema, 'params'), accountController.getAccountById);
 router.post('/accounts', authorizeRoles('ADMIN'), validate(createAccountSchema), accountController.createAccount);

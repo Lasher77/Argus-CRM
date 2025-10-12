@@ -228,6 +228,85 @@ const Report = {
 
     const data = stmt.all(String(year));
     return { year, data };
+  },
+
+  getServiceOrderReport: ({ from, to, accountId, propertyId } = {}) => {
+    const orders = ServiceOrder.getAll({ from, to });
+
+    const filtered = orders.filter((order) => {
+      if (accountId && Number(order.account_id) !== Number(accountId)) {
+        return false;
+      }
+      if (propertyId && Number(order.property_id) !== Number(propertyId)) {
+        return false;
+      }
+      return true;
+    });
+
+    const items = filtered.map((order) => ({
+      order_id: order.order_id,
+      title: order.title,
+      planned_date: order.planned_date,
+      planned_start: order.planned_start,
+      planned_end: order.planned_end,
+      status: order.status,
+      priority: order.priority,
+      account_id: order.account_id,
+      account_name: order.account_name,
+      invoice_account_id: order.invoice_account_id,
+      invoice_account_name: order.invoice_account_name,
+      property_id: order.property_id,
+      property_name: order.property_name,
+      estimated_hours: order.estimated_hours,
+      total_tracked_minutes: order.total_tracked_minutes,
+      assignments: order.assignments?.map((assignment) => ({
+        employee_id: assignment.employee_id,
+        employee_name: assignment.employee_name,
+        scheduled_date: assignment.scheduled_date,
+        scheduled_start: assignment.scheduled_start,
+        scheduled_end: assignment.scheduled_end,
+        is_primary: assignment.is_primary
+      })) ?? []
+    }));
+
+    const totalEstimatedHours = items.reduce(
+      (sum, order) => sum + (order.estimated_hours ? Number(order.estimated_hours) : 0),
+      0
+    );
+    const totalTrackedMinutes = items.reduce(
+      (sum, order) => sum + (order.total_tracked_minutes ? Number(order.total_tracked_minutes) : 0),
+      0
+    );
+
+    const employees = {};
+    items.forEach((order) => {
+      order.assignments.forEach((assignment) => {
+        if (!employees[assignment.employee_id]) {
+          employees[assignment.employee_id] = {
+            employee_id: assignment.employee_id,
+            employee_name: assignment.employee_name,
+            orders: 0
+          };
+        }
+        employees[assignment.employee_id].orders += 1;
+      });
+    });
+
+    return {
+      filters: {
+        from: from ?? null,
+        to: to ?? null,
+        accountId: accountId ? Number(accountId) : null,
+        propertyId: propertyId ? Number(propertyId) : null
+      },
+      totals: {
+        orders: items.length,
+        estimated_hours: totalEstimatedHours,
+        tracked_hours: totalTrackedMinutes / 60
+      },
+      employees: Object.values(employees),
+      orders: items
+    };
   }
 };
 

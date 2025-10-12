@@ -8,6 +8,7 @@ const { createContactSchema, updateContactSchema } = require('../validation/sche
 const { idParamSchema, accountIdParamSchema } = require('../validation/schemas/commonSchemas');
 
 // Alle Kontakte abrufen
+router.get('/contacts/search', contactController.searchContacts);
 router.get('/contacts', contactController.getAllContacts);
 
 // Kontakt nach ID abrufen

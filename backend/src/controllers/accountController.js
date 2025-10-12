@@ -14,6 +14,16 @@ const accountController = {
     }
   },
 
+  searchAccounts: (req, res, next) => {
+    try {
+      const { q, limit } = req.query;
+      const accounts = Account.search(q, limit ? Number(limit) : undefined);
+      res.json({ success: true, data: accounts });
+    } catch (error) {
+      next(ApiError.from(error));
+    }
+  },
+
   // Account nach ID abrufen
   getAccountById: (req, res, next) => {
     try {

@@ -7,6 +7,38 @@ const Property = {
     return stmt.all();
   },
 
+  search: (query, { accountId, limit = 10 } = {}) => {
+    const trimmedQuery = typeof query === 'string' ? query.trim() : '';
+    const sanitizedLimit = Number.isFinite(Number(limit)) ? Math.max(1, Math.min(Number(limit), 50)) : 10;
+
+    let sql = `
+      SELECT *
+      FROM properties
+      WHERE 1 = 1
+    `;
+    const params = [];
+
+    if (accountId) {
+      sql += ' AND account_id = ?';
+      params.push(accountId);
+    }
+
+    if (trimmedQuery) {
+      sql += ` AND (
+        LOWER(name) LIKE '%' || LOWER(?) || '%'
+        OR LOWER(IFNULL(address, '')) LIKE '%' || LOWER(?) || '%'
+        OR LOWER(IFNULL(city, '')) LIKE '%' || LOWER(?) || '%'
+      )`;
+      params.push(trimmedQuery, trimmedQuery, trimmedQuery);
+    }
+
+    sql += ' ORDER BY name LIMIT ?';
+    params.push(sanitizedLimit);
+
+    const stmt = db.prepare(sql);
+    return stmt.all(...params);
+  },
+
   getById: (id) => {
     const stmt = db.prepare('SELECT * FROM properties WHERE property_id = ?');
     return stmt.get(id);
