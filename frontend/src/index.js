@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 
 // Erstellen eines benutzerdefinierten Themes für die Anwendung
 const theme = createTheme({
@@ -59,9 +60,12 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <BrowserRouter>
-        
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
         <App />
-      
+      </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>
 );
+
+serviceWorkerRegistration.register();

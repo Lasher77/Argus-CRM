@@ -20,6 +20,7 @@ const serviceOrderRoutes = require('./routes/serviceOrderRoutes');
 const materialRoutes = require('./routes/materialRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 
 // Stellen Sie sicher, dass das Datenverzeichnis existiert
 const dataDir = path.join(__dirname, '../data');
@@ -50,6 +51,7 @@ app.use('/api', serviceOrderRoutes);
 app.use('/api', materialRoutes);
 app.use('/api', reportRoutes);
 app.use('/api', invoiceRoutes);
+app.use('/api', uploadRoutes);
 
 // Einfache Root-Route für API-Test
 app.get('/', (req, res) => {

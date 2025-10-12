@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -30,7 +30,17 @@ import SendIcon from '@mui/icons-material/Send';
 import ServiceOrderService from '../../services/serviceOrderService';
 import EmployeeService from '../../services/employeeService';
 import MaterialService from '../../services/materialService';
+import UploadService from '../../services/uploadService';
+import {
+  queueTimeEntry,
+  queuePhoto,
+  removeQueuedTimeEntry,
+  removeQueuedPhoto,
+  processTimeEntryQueue,
+  processPhotoQueue,
+} from '../../utils/offlineQueue';
 import { createServiceReportPdf, pdfToDataUri } from '../../utils/pdfUtils';
+import { createFileName, dataUrlToBlob, getExtensionFromMime } from '../../utils/fileUtils';
 
 const SectionCard = styled(Card)(({ theme }) => ({
   height: '100%',
@@ -51,6 +61,36 @@ const statusLabel = (status) => {
       return status;
   }
 };
+
+const createClientId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const resolveImageSource = (photo) => {
+  if (!photo) {
+    return null;
+  }
+  if (photo.photo_data && (photo.photo_data.startsWith('data:') || photo.photo_data.startsWith('http'))) {
+    return photo.photo_data;
+  }
+  if (photo.photo_url) {
+    return photo.photo_url;
+  }
+  return null;
+};
+
+const resolveSignatureSource = (signature) => {
+  if (!signature) {
+    return null;
+  }
+  if (signature.signature_data && (signature.signature_data.startsWith('data:') || signature.signature_data.startsWith('http'))) {
+    return signature.signature_data;
+  }
+  if (signature.signature_url) {
+    return signature.signature_url;
+  }
+  return null;
+};
+
+const isNetworkError = (error) => !navigator.onLine || (error?.isAxiosError && !error.response);
 
 const ServiceOrderDetail = () => {
   const { id } = useParams();
@@ -83,7 +123,7 @@ const ServiceOrderDetail = () => {
   });
   const [sendingReport, setSendingReport] = useState(false);
 
-  const loadOrder = async () => {
+  const loadOrder = useCallback(async () => {
     try {
       setLoading(true);
       const data = await ServiceOrderService.getServiceOrder(id);
@@ -93,7 +133,74 @@ const ServiceOrderDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  const uploadDataUrl = useCallback(async (dataUrl, orderId, type) => {
+    const blob = await dataUrlToBlob(dataUrl);
+    const extension = getExtensionFromMime(blob.type);
+    const fileName = createFileName(`${type}`, extension);
+    const presign = await UploadService.createPresignedUpload({
+      fileName,
+      fileType: blob.type,
+      fileSize: blob.size,
+      prefix: `orders/${orderId}/${type}`,
+    });
+
+    const formData = new FormData();
+    Object.entries(presign.fields).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+    formData.append('file', blob);
+
+    const response = await fetch(presign.url, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Upload fehlgeschlagen');
+    }
+
+    return presign.assetUrl || `${presign.url}/${presign.fields.key}`;
+  }, []);
+
+  const syncOfflineData = useCallback(async () => {
+    if (!navigator.onLine) {
+      return;
+    }
+
+    let shouldReload = false;
+    try {
+      const processedTimeEntries = await processTimeEntryQueue(async (record) => {
+        await ServiceOrderService.addTimeEntry(record.orderId, record.payload);
+        if (String(record.orderId) === String(id)) {
+          shouldReload = true;
+        }
+      });
+
+      const processedPhotos = await processPhotoQueue(async (record) => {
+        if (!record.photo_data) {
+          return;
+        }
+        const photoUrl = record.photo_data.startsWith('data:')
+          ? await uploadDataUrl(record.photo_data, record.orderId, 'photos')
+          : record.photo_data;
+        await ServiceOrderService.addPhoto(record.orderId, {
+          caption: record.caption,
+          photo_data: photoUrl,
+        });
+        if (String(record.orderId) === String(id)) {
+          shouldReload = true;
+        }
+      });
+
+      if (shouldReload || processedTimeEntries || processedPhotos) {
+        await loadOrder();
+      }
+    } catch (error) {
+      console.error('Offline-Daten konnten nicht synchronisiert werden', error);
+    }
+  }, [id, loadOrder, uploadDataUrl]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -114,8 +221,16 @@ const ServiceOrderDetail = () => {
 
   useEffect(() => {
     loadOrder();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [loadOrder]);
+
+  useEffect(() => {
+    syncOfflineData();
+    const handleOnline = () => {
+      syncOfflineData();
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [syncOfflineData]);
 
   const handleStatusChange = async (newStatus) => {
     try {
@@ -128,18 +243,61 @@ const ServiceOrderDetail = () => {
 
   const handleTimeEntrySubmit = async (event) => {
     event.preventDefault();
-    if (!timeEntryForm.employee_id || !timeEntryForm.start_time) {
+    if (!order || !timeEntryForm.employee_id || !timeEntryForm.start_time) {
       return;
     }
+
+    const payload = {
+      employee_id: Number(timeEntryForm.employee_id),
+      start_time: new Date(timeEntryForm.start_time).toISOString(),
+      end_time: timeEntryForm.end_time ? new Date(timeEntryForm.end_time).toISOString() : null,
+      distance_km: timeEntryForm.distance_km ? Number(timeEntryForm.distance_km) : null,
+      notes: timeEntryForm.notes || null,
+      source: 'mobile',
+    };
+
+    const employee = employees.find((item) => item.employee_id === Number(timeEntryForm.employee_id));
+    const clientId = createClientId('offline-time');
+
+    const addPendingEntry = async () => {
+      await queueTimeEntry({
+        clientId,
+        orderId: order.order_id,
+        payload,
+      });
+      setOrder((prev) => ({
+        ...prev,
+        time_entries: [
+          ...(prev?.time_entries || []),
+          {
+            ...payload,
+            time_entry_id: clientId,
+            employee_name: employee ? `${employee.first_name} ${employee.last_name}`.trim() : undefined,
+            notes: payload.notes,
+            duration_minutes:
+              payload.start_time && payload.end_time
+                ? Math.max(0, Math.round((new Date(payload.end_time) - new Date(payload.start_time)) / 60000))
+                : null,
+            pending: true,
+          },
+        ],
+      }));
+      window.alert('Keine Verbindung. Die Zeiterfassung wird synchronisiert, sobald eine Verbindung besteht.');
+      setTimeEntryForm({
+        employee_id: '',
+        start_time: dayjs().format('YYYY-MM-DDTHH:mm'),
+        end_time: '',
+        distance_km: '',
+        notes: '',
+      });
+    };
+
     try {
-      const payload = {
-        employee_id: Number(timeEntryForm.employee_id),
-        start_time: new Date(timeEntryForm.start_time).toISOString(),
-        end_time: timeEntryForm.end_time ? new Date(timeEntryForm.end_time).toISOString() : null,
-        distance_km: timeEntryForm.distance_km ? Number(timeEntryForm.distance_km) : null,
-        notes: timeEntryForm.notes || null,
-        source: 'mobile'
-      };
+      if (!navigator.onLine) {
+        await addPendingEntry();
+        return;
+      }
+
       const updated = await ServiceOrderService.addTimeEntry(order.order_id, payload);
       setOrder(updated);
       setTimeEntryForm({
@@ -147,14 +305,26 @@ const ServiceOrderDetail = () => {
         start_time: dayjs().format('YYYY-MM-DDTHH:mm'),
         end_time: '',
         distance_km: '',
-        notes: ''
+        notes: '',
       });
     } catch (error) {
-      console.error('Zeiterfassung konnte nicht gespeichert werden', error);
+      if (isNetworkError(error)) {
+        await addPendingEntry();
+      } else {
+        console.error('Zeiterfassung konnte nicht gespeichert werden', error);
+      }
     }
   };
 
   const handleTimeEntryDelete = async (entryId) => {
+    if (typeof entryId === 'string' && entryId.startsWith('offline-time')) {
+      await removeQueuedTimeEntry(entryId);
+      setOrder((prev) => ({
+        ...prev,
+        time_entries: prev.time_entries.filter((entry) => entry.time_entry_id !== entryId),
+      }));
+      return;
+    }
     try {
       const updated = await ServiceOrderService.deleteTimeEntry(entryId);
       setOrder(updated);
@@ -213,19 +383,76 @@ const ServiceOrderDetail = () => {
 
   const handlePhotoSubmit = async (event) => {
     event.preventDefault();
-    if (!photoForm.photo_data) {
+    if (!order || !photoForm.photo_data) {
       return;
     }
-    try {
-      const updated = await ServiceOrderService.addPhoto(order.order_id, photoForm);
+
+    const clientId = createClientId('offline-photo');
+    const addPendingPhoto = async () => {
+      if (!photoForm.photo_data.startsWith('data:')) {
+        window.alert('Offline können nur Data-URLs zwischengespeichert werden.');
+        return;
+      }
+      await queuePhoto({
+        clientId,
+        orderId: order.order_id,
+        caption: photoForm.caption,
+        photo_data: photoForm.photo_data,
+      });
+      setOrder((prev) => ({
+        ...prev,
+        photos: [
+          {
+            photo_id: clientId,
+            caption: photoForm.caption,
+            photo_data: photoForm.photo_data,
+            created_at: new Date().toISOString(),
+            pending: true,
+          },
+          ...(prev?.photos || []),
+        ],
+      }));
+      window.alert('Keine Verbindung. Das Foto wird synchronisiert, sobald eine Verbindung besteht.');
+      setPhotoForm({ photo_data: '', caption: '' });
+    };
+
+    const submitOnline = async () => {
+      let photoPayload = photoForm.photo_data;
+      if (photoForm.photo_data.startsWith('data:')) {
+        photoPayload = await uploadDataUrl(photoForm.photo_data, order.order_id, 'photos');
+      }
+      const updated = await ServiceOrderService.addPhoto(order.order_id, {
+        caption: photoForm.caption,
+        photo_data: photoPayload,
+      });
       setOrder(updated);
       setPhotoForm({ photo_data: '', caption: '' });
+    };
+
+    try {
+      if (!navigator.onLine) {
+        await addPendingPhoto();
+        return;
+      }
+      await submitOnline();
     } catch (error) {
-      console.error('Foto konnte nicht gespeichert werden', error);
+      if (isNetworkError(error)) {
+        await addPendingPhoto();
+      } else {
+        console.error('Foto konnte nicht gespeichert werden', error);
+      }
     }
   };
 
   const handlePhotoDelete = async (photoId) => {
+    if (typeof photoId === 'string' && photoId.startsWith('offline-photo')) {
+      await removeQueuedPhoto(photoId);
+      setOrder((prev) => ({
+        ...prev,
+        photos: prev.photos.filter((photo) => photo.photo_id !== photoId),
+      }));
+      return;
+    }
     try {
       const updated = await ServiceOrderService.deletePhoto(order.order_id, photoId);
       setOrder(updated);
@@ -236,13 +463,21 @@ const ServiceOrderDetail = () => {
 
   const handleSignatureSubmit = async (event) => {
     event.preventDefault();
-    if (!signatureForm.signature_data) {
+    if (!order || !signatureForm.signature_data) {
       return;
     }
     try {
+      let signatureData = signatureForm.signature_data;
+      if (navigator.onLine && signatureForm.signature_data.startsWith('data:')) {
+        try {
+          signatureData = await uploadDataUrl(signatureForm.signature_data, order.order_id, 'signatures');
+        } catch (uploadError) {
+          console.warn('Signatur-Upload fehlgeschlagen, verwende lokale Daten.', uploadError);
+        }
+      }
       const updated = await ServiceOrderService.setSignature(order.order_id, {
         signed_by: signatureForm.signed_by,
-        signature_data: signatureForm.signature_data,
+        signature_data: signatureData,
       });
       setOrder(updated);
       setSignatureForm({ signed_by: '', signature_data: '' });
@@ -260,13 +495,18 @@ const ServiceOrderDetail = () => {
     }
   };
 
-  const handleDownloadReport = () => {
+  const handleDownloadReport = async () => {
     if (!order) {
       return;
     }
 
-    const doc = createServiceReportPdf(order);
-    doc.save(`Servicebericht-${order.order_id}.pdf`);
+    try {
+      const doc = await createServiceReportPdf(order);
+      doc.save(`Servicebericht-${order.order_id}.pdf`);
+    } catch (error) {
+      console.error('PDF konnte nicht erstellt werden', error);
+      window.alert('Der Servicebericht konnte nicht erzeugt werden.');
+    }
   };
 
   const handleSendReport = async () => {
@@ -282,7 +522,7 @@ const ServiceOrderDetail = () => {
 
     try {
       setSendingReport(true);
-      const doc = createServiceReportPdf(order);
+      const doc = await createServiceReportPdf(order);
       const pdfData = pdfToDataUri(doc);
       await ServiceOrderService.sendReport(order.order_id, {
         to,
@@ -476,24 +716,36 @@ const ServiceOrderDetail = () => {
               <Divider sx={{ my: 3 }} />
 
               {order.time_entries && order.time_entries.length ? (
-                order.time_entries.map((entry) => (
-                  <Box key={entry.time_entry_id} sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                    <Box>
-                      <Typography variant="subtitle2">{entry.employee_name}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {dayjs(entry.start_time).format('DD.MM.YYYY HH:mm')} - {entry.end_time ? dayjs(entry.end_time).format('HH:mm') : '--:--'} ({entry.duration_minutes ?? 0} Minuten)
-                      </Typography>
-                      {entry.notes && (
-                        <Typography variant="body2" color="text.secondary">{entry.notes}</Typography>
-                      )}
+                order.time_entries.map((entry) => {
+                  const isPending = Boolean(entry.pending);
+                  return (
+                    <Box key={entry.time_entry_id} sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Box>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Typography variant="subtitle2">{entry.employee_name}</Typography>
+                          {isPending && <Chip size="small" color="warning" label="Offline" />}
+                        </Stack>
+                        <Typography variant="body2" color="text.secondary">
+                          {entry.start_time ? dayjs(entry.start_time).format('DD.MM.YYYY HH:mm') : '--:--'} - {entry.end_time ? dayjs(entry.end_time).format('HH:mm') : '--:--'} ({entry.duration_minutes ?? 0} Minuten)
+                        </Typography>
+                        {entry.notes && (
+                          <Typography variant="body2" color="text.secondary">{entry.notes}</Typography>
+                        )}
+                      </Box>
+                      <Tooltip title={isPending ? 'Synchronisation ausstehend' : 'Löschen'}>
+                        <span>
+                          <IconButton
+                            onClick={() => handleTimeEntryDelete(entry.time_entry_id)}
+                            disabled={isPending}
+                            size="small"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
                     </Box>
-                    <Tooltip title="Löschen">
-                      <IconButton onClick={() => handleTimeEntryDelete(entry.time_entry_id)}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                ))
+                  );
+                })
               ) : (
                 <Typography color="text.secondary">Noch keine Zeiten erfasst.</Typography>
               )}
@@ -601,26 +853,39 @@ const ServiceOrderDetail = () => {
               <Divider sx={{ my: 3 }} />
 
               {order.photos && order.photos.length ? (
-                order.photos.map((photo) => (
-                  <Box key={photo.photo_id} sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    {photo.photo_data?.startsWith('data:image') ? (
-                      <img src={photo.photo_data} alt={photo.caption || 'Auftragsfoto'} style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 8, marginRight: 16 }} />
-                    ) : (
-                      <Box sx={{ width: 96, height: 96, bgcolor: 'grey.200', borderRadius: 2, mr: 2 }} />
-                    )}
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Typography variant="subtitle2">{photo.caption || 'Ohne Beschreibung'}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {photo.created_at ? dayjs(photo.created_at).format('DD.MM.YYYY HH:mm') : ''}
-                      </Typography>
+                order.photos.map((photo) => {
+                  const isPending = Boolean(photo.pending);
+                  const photoSrc = resolveImageSource(photo);
+                  return (
+                    <Box key={photo.photo_id} sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      {photoSrc ? (
+                        <img
+                          src={photoSrc}
+                          alt={photo.caption || 'Auftragsfoto'}
+                          style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 8, marginRight: 16 }}
+                        />
+                      ) : (
+                        <Box sx={{ width: 96, height: 96, bgcolor: 'grey.200', borderRadius: 2, mr: 2 }} />
+                      )}
+                      <Box sx={{ flexGrow: 1 }}>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Typography variant="subtitle2">{photo.caption || 'Ohne Beschreibung'}</Typography>
+                          {isPending && <Chip size="small" color="warning" label="Offline" />}
+                        </Stack>
+                        <Typography variant="body2" color="text.secondary">
+                          {photo.created_at ? dayjs(photo.created_at).format('DD.MM.YYYY HH:mm') : ''}
+                        </Typography>
+                      </Box>
+                      <Tooltip title={isPending ? 'Synchronisation ausstehend' : 'Löschen'}>
+                        <span>
+                          <IconButton onClick={() => handlePhotoDelete(photo.photo_id)} disabled={isPending} size="small">
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
                     </Box>
-                    <Tooltip title="Löschen">
-                      <IconButton onClick={() => handlePhotoDelete(photo.photo_id)}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                ))
+                  );
+                })
               ) : (
                 <Typography color="text.secondary">Keine Fotos vorhanden.</Typography>
               )}
@@ -636,13 +901,33 @@ const ServiceOrderDetail = () => {
               {order.signature ? (
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="subtitle2">Signiert von {order.signature.signed_by || 'Kunde'}</Typography>
-                  {order.signature.signature_data?.startsWith('data:image') ? (
-                    <img src={order.signature.signature_data} alt="Signatur" style={{ maxWidth: '100%', marginTop: 16, border: '1px solid rgba(0,0,0,0.12)', borderRadius: 8 }} />
-                  ) : (
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                      {order.signature.signature_data}
-                    </Typography>
-                  )}
+                  {(() => {
+                    const signatureSrc = resolveSignatureSource(order.signature);
+                    if (signatureSrc && (signatureSrc.startsWith('http') || signatureSrc.startsWith('data:image'))) {
+                      return (
+                        <img
+                          src={signatureSrc}
+                          alt="Signatur"
+                          style={{ maxWidth: '100%', marginTop: 16, border: '1px solid rgba(0,0,0,0.12)', borderRadius: 8 }}
+                        />
+                      );
+                    }
+                    if (signatureSrc) {
+                      return (
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                          {signatureSrc}
+                        </Typography>
+                      );
+                    }
+                    return (
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                        Keine Signatur hinterlegt.
+                      </Typography>
+                    );
+                  })()}
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    {order.signature.signed_at ? dayjs(order.signature.signed_at).format('DD.MM.YYYY HH:mm') : ''}
+                  </Typography>
                   <Button onClick={handleSignatureClear} startIcon={<DeleteIcon />} sx={{ mt: 2 }}>
                     Signatur entfernen
                   </Button>

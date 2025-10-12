@@ -2,6 +2,23 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import dayjs from 'dayjs';
 
+const blobToDataUrl = (blob) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+
+const fetchAsDataUrl = async (url) => {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Bild konnte nicht geladen werden (${response.status})`);
+  }
+  const blob = await response.blob();
+  return blobToDataUrl(blob);
+};
+
 const formatDate = (value, format = 'DD.MM.YYYY') => {
   if (!value) {
     return '–';
@@ -40,7 +57,52 @@ const getImageFormat = (dataUrl) => {
   return 'PNG';
 };
 
-export const createServiceReportPdf = (order) => {
+const resolveSignatureData = async (signature) => {
+  if (!signature) {
+    return null;
+  }
+  if (signature.signature_data && signature.signature_data.startsWith('data:')) {
+    return signature.signature_data;
+  }
+  if (signature.signature_data && signature.signature_data.startsWith('http')) {
+    try {
+      return await fetchAsDataUrl(signature.signature_data);
+    } catch (error) {
+      console.warn('Signatur konnte nicht geladen werden', error);
+      return null;
+    }
+  }
+  if (signature.signature_url) {
+    try {
+      return await fetchAsDataUrl(signature.signature_url);
+    } catch (error) {
+      console.warn('Signatur konnte nicht geladen werden', error);
+      return null;
+    }
+  }
+  return null;
+};
+
+const resolvePhotoData = async (photo) => {
+  if (!photo) {
+    return null;
+  }
+  if (photo.photo_data && photo.photo_data.startsWith('data:')) {
+    return photo.photo_data;
+  }
+  const remoteSource = photo.photo_data?.startsWith('http') ? photo.photo_data : photo.photo_url;
+  if (remoteSource) {
+    try {
+      return await fetchAsDataUrl(remoteSource);
+    } catch (error) {
+      console.warn('Foto konnte nicht geladen werden', error);
+      return null;
+    }
+  }
+  return null;
+};
+
+export const createServiceReportPdf = async (order) => {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const marginLeft = 40;
 
@@ -142,26 +204,29 @@ export const createServiceReportPdf = (order) => {
     currentY += 35;
   }
 
-  if (order.signature?.signature_data) {
-    const signatureY = currentY + 10;
-    doc.setFontSize(14);
-    doc.text('Unterschrift', marginLeft, signatureY);
+  if (order.signature) {
+    const signatureData = await resolveSignatureData(order.signature);
+    if (signatureData) {
+      const signatureY = currentY + 10;
+      doc.setFontSize(14);
+      doc.text('Unterschrift', marginLeft, signatureY);
 
-    doc.addImage(
-      order.signature.signature_data,
-      getImageFormat(order.signature.signature_data),
-      marginLeft,
-      signatureY + 10,
-      160,
-      80
-    );
+      doc.addImage(
+        signatureData,
+        getImageFormat(signatureData),
+        marginLeft,
+        signatureY + 10,
+        160,
+        80
+      );
 
-    if (order.signature.signed_by) {
-      doc.setFontSize(10);
-      doc.text(`Unterschrieben von: ${order.signature.signed_by}`, marginLeft, signatureY + 100);
+      if (order.signature.signed_by) {
+        doc.setFontSize(10);
+        doc.text(`Unterschrieben von: ${order.signature.signed_by}`, marginLeft, signatureY + 100);
+      }
+
+      currentY = signatureY + 120;
     }
-
-    currentY = signatureY + 120;
   }
 
   if (order.photos && order.photos.length) {
@@ -179,9 +244,12 @@ export const createServiceReportPdf = (order) => {
     const maxWidth = doc.internal.pageSize.getWidth() - marginLeft * 2;
     const photoHeight = 150;
 
-    order.photos.forEach((photo, index) => {
-      if (!photo.photo_data) {
-        return;
+    for (let index = 0; index < order.photos.length; index += 1) {
+      const photo = order.photos[index];
+      const imageData = await resolvePhotoData(photo);
+      if (!imageData) {
+        // eslint-disable-next-line no-continue
+        continue;
       }
 
       if (currentY + photoHeight > doc.internal.pageSize.getHeight() - 40) {
@@ -193,15 +261,15 @@ export const createServiceReportPdf = (order) => {
       doc.setFontSize(10);
       doc.text(caption, marginLeft, currentY);
       doc.addImage(
-        photo.photo_data,
-        getImageFormat(photo.photo_data),
+        imageData,
+        getImageFormat(imageData),
         marginLeft,
         currentY + 10,
         maxWidth,
         photoHeight
       );
       currentY += photoHeight + 30;
-    });
+    }
   }
 
   return doc;
