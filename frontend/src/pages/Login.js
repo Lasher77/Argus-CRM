@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -18,6 +18,41 @@ const Login = () => {
   const [form, setForm] = useState({ username: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkSetupStatus = async () => {
+      try {
+        await apiClient.get('/setup');
+        if (isMounted) {
+          navigate('/setup', { replace: true });
+        }
+      } catch (err) {
+        if (err.response?.status === 409) {
+          return;
+        }
+
+        if (isMounted) {
+          setError(err.response?.data?.message || 'Der Setup-Status konnte nicht ermittelt werden.');
+        }
+      }
+    };
+
+    checkSetupStatus();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [navigate]);
+
+  useEffect(() => {
+    if (location.state?.setupCompleted) {
+      setSuccessMessage('Setup erfolgreich abgeschlossen. Bitte melden Sie sich mit den neuen Zugangsdaten an.');
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location, navigate]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -63,6 +98,12 @@ const Login = () => {
               Melden Sie sich mit Ihren Zugangsdaten an, um das CRM zu nutzen.
             </Typography>
           </Box>
+
+          {successMessage ? (
+            <Alert severity="success" data-testid="login-success">
+              {successMessage}
+            </Alert>
+          ) : null}
 
           {error ? (
             <Alert severity="error" data-testid="login-error">

@@ -34,10 +34,12 @@ import QuoteDetail from './pages/quotes/QuoteDetail';
 import QuoteForm from './pages/quotes/QuoteForm';
 import LayoutEditor from './pages/settings/LayoutEditor';
 import Login from './pages/Login';
+import SetupWizard from './pages/SetupWizard';
 
 function App() {
   return (
     <Routes>
+      <Route path="/setup" element={<SetupWizard />} />
       <Route path="/login" element={<Login />} />
       <Route
         path="/"
