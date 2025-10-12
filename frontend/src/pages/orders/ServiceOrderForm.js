@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Typography,
@@ -10,13 +10,15 @@ import {
   MenuItem,
   Button,
   Chip,
-  CircularProgress
+  CircularProgress,
+  Autocomplete
 } from '@mui/material';
 import dayjs from 'dayjs';
 import { useNavigate, useParams } from 'react-router-dom';
 import ServiceOrderService from '../../services/serviceOrderService';
 import AccountService from '../../services/accountService';
 import EmployeeService from '../../services/employeeService';
+import ContactService from '../../services/contactService';
 
 const priorityOptions = [
   { value: 'low', label: 'Niedrig' },
@@ -37,10 +39,20 @@ const ServiceOrderForm = () => {
   const isEdit = Boolean(id);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
-  const [accounts, setAccounts] = useState([]);
+  const [customerOptions, setCustomerOptions] = useState([]);
+  const [customerInputValue, setCustomerInputValue] = useState('');
+  const [customerLoading, setCustomerLoading] = useState(false);
+  const [customerValue, setCustomerValue] = useState(null);
+  const [invoiceOptions, setInvoiceOptions] = useState([]);
+  const [invoiceInputValue, setInvoiceInputValue] = useState('');
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [invoiceValue, setInvoiceValue] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [properties, setProperties] = useState([]);
-  const [contacts, setContacts] = useState([]);
+  const [recipientOptions, setRecipientOptions] = useState([]);
+  const [recipientInputValue, setRecipientInputValue] = useState('');
+  const [recipientLoading, setRecipientLoading] = useState(false);
+  const [recipientValue, setRecipientValue] = useState(null);
   const [assignedEmployees, setAssignedEmployees] = useState([]);
   const [form, setForm] = useState({
     title: '',
@@ -58,14 +70,13 @@ const ServiceOrderForm = () => {
     notes: ''
   });
 
-  const loadAccounts = async () => {
-    try {
-      const response = await AccountService.getAllAccounts();
-      setAccounts(response.data);
-    } catch (error) {
-      console.error('Accounts konnten nicht geladen werden', error);
+  const ensureOptionIncluded = useCallback((options, option, key) => {
+    if (!option) {
+      return options;
     }
-  };
+    const exists = options.some((item) => item[key] === option[key]);
+    return exists ? options : [...options, option];
+  }, []);
 
   const loadEmployees = async () => {
     try {
@@ -76,10 +87,11 @@ const ServiceOrderForm = () => {
     }
   };
 
-  const loadAccountData = async (accountId) => {
+  const loadAccountData = useCallback(async (accountId, currentRecipient = recipientValue) => {
     if (!accountId) {
       setProperties([]);
-      setContacts([]);
+      setRecipientOptions([]);
+      setRecipientValue(null);
       return;
     }
     try {
@@ -88,11 +100,15 @@ const ServiceOrderForm = () => {
         AccountService.getAccountContacts(accountId)
       ]);
       setProperties(propertyRes.data);
-      setContacts(contactRes.data);
+      const fetchedContacts = contactRes.data || [];
+      setRecipientOptions((prev) => {
+        const base = fetchedContacts.length ? fetchedContacts : prev;
+        return ensureOptionIncluded(base, currentRecipient ?? recipientValue, 'contact_id');
+      });
     } catch (error) {
       console.error('Account-Daten konnten nicht geladen werden', error);
     }
-  };
+  }, [ensureOptionIncluded, recipientValue]);
 
   const loadOrder = async () => {
     if (!isEdit) {
@@ -100,6 +116,23 @@ const ServiceOrderForm = () => {
     }
     try {
       const data = await ServiceOrderService.getServiceOrder(id);
+      const accountOption = data.account_id
+        ? { account_id: data.account_id, name: data.account_name }
+        : null;
+      const invoiceOption = data.invoice_account_id
+        ? {
+            account_id: data.invoice_account_id,
+            name: data.invoice_account_name || data.account_name
+          }
+        : accountOption;
+      const recipientOption = data.service_recipient_contact_id
+        ? {
+            contact_id: data.service_recipient_contact_id,
+            first_name: data.service_recipient_name || '',
+            last_name: '',
+            display_name: data.service_recipient_name
+          }
+        : null;
       setForm({
         title: data.title,
         description: data.description || '',
@@ -115,8 +148,14 @@ const ServiceOrderForm = () => {
         estimated_hours: data.estimated_hours || '',
         notes: data.notes || ''
       });
+      setCustomerValue(accountOption || null);
+      setCustomerOptions((prev) => ensureOptionIncluded(prev, accountOption, 'account_id'));
+      setInvoiceValue(invoiceOption || null);
+      setInvoiceOptions((prev) => ensureOptionIncluded(prev, invoiceOption, 'account_id'));
+      setRecipientValue(recipientOption || null);
+      setRecipientOptions((prev) => ensureOptionIncluded(prev, recipientOption, 'contact_id'));
       setAssignedEmployees(data.assignments?.map((assignment) => assignment.employee_id.toString()) || []);
-      await loadAccountData(data.account_id);
+      await loadAccountData(data.account_id, recipientOption);
     } catch (error) {
       console.error('Auftrag konnte nicht geladen werden', error);
     } finally {
@@ -125,15 +164,99 @@ const ServiceOrderForm = () => {
   };
 
   useEffect(() => {
-    loadAccounts();
     loadEmployees();
   }, []);
 
   useEffect(() => {
-    if (form.account_id) {
-      loadAccountData(form.account_id);
+    loadAccountData(form.account_id);
+  }, [form.account_id, loadAccountData]);
+
+  useEffect(() => {
+    let active = true;
+    const handler = setTimeout(async () => {
+      try {
+        setCustomerLoading(true);
+        const response = await AccountService.searchAccounts(customerInputValue, { limit: 20 });
+        if (!active) {
+          return;
+        }
+        const data = response.data || [];
+        setCustomerOptions(ensureOptionIncluded(data, customerValue, 'account_id'));
+      } catch (error) {
+        console.error('Accounts konnten nicht geladen werden', error);
+      } finally {
+        if (active) {
+          setCustomerLoading(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(handler);
+    };
+  }, [customerInputValue, customerValue, ensureOptionIncluded]);
+
+  useEffect(() => {
+    let active = true;
+    const handler = setTimeout(async () => {
+      try {
+        setInvoiceLoading(true);
+        const response = await AccountService.searchAccounts(invoiceInputValue, { limit: 20 });
+        if (!active) {
+          return;
+        }
+        const data = response.data || [];
+        setInvoiceOptions(ensureOptionIncluded(data, invoiceValue, 'account_id'));
+      } catch (error) {
+        console.error('Rechnungsempfänger konnten nicht geladen werden', error);
+      } finally {
+        if (active) {
+          setInvoiceLoading(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(handler);
+    };
+  }, [invoiceInputValue, invoiceValue, ensureOptionIncluded]);
+
+  useEffect(() => {
+    if (!form.account_id) {
+      setRecipientOptions([]);
+      setRecipientValue(null);
+      return;
     }
-  }, [form.account_id]);
+
+    let active = true;
+    const handler = setTimeout(async () => {
+      try {
+        setRecipientLoading(true);
+        const response = await ContactService.searchContacts(recipientInputValue, {
+          accountId: form.account_id,
+          limit: 25
+        });
+        if (!active) {
+          return;
+        }
+        const data = response.data || [];
+        setRecipientOptions(ensureOptionIncluded(data, recipientValue, 'contact_id'));
+      } catch (error) {
+        console.error('Kontakte konnten nicht geladen werden', error);
+      } finally {
+        if (active) {
+          setRecipientLoading(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(handler);
+    };
+  }, [recipientInputValue, form.account_id, recipientValue, ensureOptionIncluded]);
 
   useEffect(() => {
     loadOrder();
@@ -143,6 +266,61 @@ const ServiceOrderForm = () => {
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAccountSelect = (_, value) => {
+    const previousAccountId = form.account_id;
+    setCustomerValue(value);
+    setCustomerInputValue(value ? value.name : '');
+    setCustomerOptions((prev) => ensureOptionIncluded(prev, value, 'account_id'));
+    setForm((prev) => ({
+      ...prev,
+      account_id: value ? value.account_id : '',
+      property_id: '',
+      service_recipient_contact_id: '',
+      invoice_account_id:
+        value && (!invoiceValue || !previousAccountId || invoiceValue.account_id === previousAccountId)
+          ? value.account_id
+          : value
+            ? prev.invoice_account_id
+            : ''
+    }));
+
+    if (!value) {
+      setInvoiceValue(null);
+    } else if (!invoiceValue || !previousAccountId || invoiceValue.account_id === previousAccountId) {
+      setInvoiceValue(value);
+      setInvoiceOptions((prev) => ensureOptionIncluded(prev, value, 'account_id'));
+      setInvoiceInputValue(value.name);
+    }
+
+    setRecipientValue(null);
+    setRecipientOptions([]);
+    setRecipientInputValue('');
+  };
+
+  const handleInvoiceSelect = (_, value) => {
+    setInvoiceValue(value);
+    setInvoiceOptions((prev) => ensureOptionIncluded(prev, value, 'account_id'));
+    setInvoiceInputValue(value ? value.name : '');
+    setForm((prev) => ({
+      ...prev,
+      invoice_account_id: value ? value.account_id : ''
+    }));
+  };
+
+  const handleRecipientSelect = (_, value) => {
+    setRecipientValue(value);
+    setRecipientOptions((prev) => ensureOptionIncluded(prev, value, 'contact_id'));
+    setRecipientInputValue(
+      value
+        ? value.display_name || `${value.first_name || ''} ${value.last_name || ''}`.trim()
+        : ''
+    );
+    setForm((prev) => ({
+      ...prev,
+      service_recipient_contact_id: value ? value.contact_id : ''
+    }));
   };
 
   const plannedStartISO = useMemo(() => (form.planned_start ? new Date(form.planned_start).toISOString() : null), [form.planned_start]);
@@ -245,21 +423,32 @@ const ServiceOrderForm = () => {
             </Grid>
             <Grid item xs={12} md={4}>
               <Stack spacing={2}>
-                <TextField
-                  name="account_id"
-                  label="Kunde"
-                  select
-                  required
-                  value={form.account_id}
-                  onChange={handleChange}
-                >
-                  <MenuItem value="">Bitte auswählen</MenuItem>
-                  {accounts.map((account) => (
-                    <MenuItem key={account.account_id} value={account.account_id}>
-                      {account.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <Autocomplete
+                  options={customerOptions}
+                  value={customerValue}
+                  inputValue={customerInputValue}
+                  loading={customerLoading}
+                  onChange={handleAccountSelect}
+                  onInputChange={(_, newValue) => setCustomerInputValue(newValue)}
+                  getOptionLabel={(option) => option?.name || ''}
+                  isOptionEqualToValue={(option, value) => option?.account_id === value?.account_id}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Auftraggeber"
+                      required
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {customerLoading ? <CircularProgress color="inherit" size={18} /> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        )
+                      }}
+                    />
+                  )}
+                />
                 <TextField
                   name="property_id"
                   label="Objekt"
@@ -275,34 +464,60 @@ const ServiceOrderForm = () => {
                     </MenuItem>
                   ))}
                 </TextField>
-                <TextField
-                  name="service_recipient_contact_id"
-                  label="Leistungsempfänger"
-                  select
-                  value={form.service_recipient_contact_id}
-                  onChange={handleChange}
+                <Autocomplete
+                  options={recipientOptions}
+                  value={recipientValue}
+                  inputValue={recipientInputValue}
+                  loading={recipientLoading}
+                  onChange={handleRecipientSelect}
+                  onInputChange={(_, newValue) => setRecipientInputValue(newValue)}
+                  getOptionLabel={(option) =>
+                    option?.display_name
+                      || `${option?.first_name || ''} ${option?.last_name || ''}`.trim()
+                  }
+                  isOptionEqualToValue={(option, value) => option?.contact_id === value?.contact_id}
                   disabled={!form.account_id}
-                >
-                  <MenuItem value="">Kein Ansprechpartner</MenuItem>
-                  {contacts.map((contact) => (
-                    <MenuItem key={contact.contact_id} value={contact.contact_id}>
-                      {contact.first_name} {contact.last_name}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  name="invoice_account_id"
-                  label="Rechnungsempfänger"
-                  select
-                  value={form.invoice_account_id}
-                  onChange={handleChange}
-                >
-                  {accounts.map((account) => (
-                    <MenuItem key={account.account_id} value={account.account_id}>
-                      {account.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Leistungsempfänger"
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {recipientLoading ? <CircularProgress color="inherit" size={18} /> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        )
+                      }}
+                    />
+                  )}
+                />
+                <Autocomplete
+                  options={invoiceOptions}
+                  value={invoiceValue}
+                  inputValue={invoiceInputValue}
+                  loading={invoiceLoading}
+                  onChange={handleInvoiceSelect}
+                  onInputChange={(_, newValue) => setInvoiceInputValue(newValue)}
+                  getOptionLabel={(option) => option?.name || ''}
+                  isOptionEqualToValue={(option, value) => option?.account_id === value?.account_id}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Rechnungsempfänger"
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {invoiceLoading ? <CircularProgress color="inherit" size={18} /> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        )
+                      }}
+                    />
+                  )}
+                />
               </Stack>
             </Grid>
 

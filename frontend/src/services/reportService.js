@@ -19,6 +19,11 @@ const ReportService = {
   async getRevenueByMonth(year) {
     const response = await apiClient.get('/reports/revenue', { params: { year } });
     return response.data.data;
+  },
+
+  async getServiceOrderReport(filters = {}) {
+    const response = await apiClient.get('/reports/service-orders', { params: filters });
+    return response.data.data;
   }
 };
 

@@ -12,6 +12,35 @@ const Account = {
     return stmt.all();
   },
 
+  search: (query, limit = 10) => {
+    const trimmedQuery = typeof query === 'string' ? query.trim() : '';
+    const sanitizedLimit = Number.isFinite(Number(limit)) ? Math.max(1, Math.min(Number(limit), 50)) : 10;
+
+    if (!trimmedQuery) {
+      const stmt = db.prepare(`
+        SELECT *
+        FROM accounts
+        ORDER BY name
+        LIMIT ?
+      `);
+      return stmt.all(sanitizedLimit);
+    }
+
+    const stmt = db.prepare(`
+      SELECT *
+      FROM accounts
+      WHERE (
+        LOWER(name) LIKE '%' || LOWER(?) || '%'
+        OR LOWER(IFNULL(email, '')) LIKE '%' || LOWER(?) || '%'
+        OR LOWER(IFNULL(address, '')) LIKE '%' || LOWER(?) || '%'
+      )
+      ORDER BY name
+      LIMIT ?
+    `);
+
+    return stmt.all(trimmedQuery, trimmedQuery, trimmedQuery, sanitizedLimit);
+  },
+
   // Account nach ID abrufen
   getById: (id) => {
     const stmt = db.prepare(`

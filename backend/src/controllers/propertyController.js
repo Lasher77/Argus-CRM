@@ -12,6 +12,19 @@ const getAllProperties = (req, res, next) => {
   }
 };
 
+const searchProperties = (req, res, next) => {
+  try {
+    const { q, accountId, limit } = req.query;
+    const properties = Property.search(q, {
+      accountId: accountId ? Number(accountId) : undefined,
+      limit: limit ? Number(limit) : undefined
+    });
+    res.json({ success: true, data: properties });
+  } catch (err) {
+    next(ApiError.from(err));
+  }
+};
+
 // Hausobjekt nach ID abrufen
 const getPropertyById = (req, res, next) => {
   try {
@@ -68,6 +81,7 @@ const deleteProperty = (req, res, next) => {
 
 module.exports = {
   getAllProperties,
+  searchProperties,
   getPropertyById,
   getPropertiesByAccountId,
   createProperty,

@@ -8,6 +8,7 @@ const { createPropertySchema, updatePropertySchema } = require('../validation/sc
 const { idParamSchema, accountIdParamSchema } = require('../validation/schemas/commonSchemas');
 
 // Alle Hausobjekte abrufen
+router.get('/properties/search', propertyController.searchProperties);
 router.get('/properties', propertyController.getAllProperties);
 
 // Hausobjekt nach ID abrufen

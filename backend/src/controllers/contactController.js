@@ -12,6 +12,19 @@ const getAllContacts = (req, res, next) => {
   }
 };
 
+const searchContacts = (req, res, next) => {
+  try {
+    const { q, accountId, limit } = req.query;
+    const contacts = Contact.search(q, {
+      accountId: accountId ? Number(accountId) : undefined,
+      limit: limit ? Number(limit) : undefined
+    });
+    res.json({ success: true, data: contacts });
+  } catch (err) {
+    next(ApiError.from(err));
+  }
+};
+
 // Kontakt nach ID abrufen
 const getContactById = (req, res, next) => {
   try {
@@ -68,6 +81,7 @@ const deleteContact = (req, res, next) => {
 
 module.exports = {
   getAllContacts,
+  searchContacts,
   getContactById,
   getContactsByAccountId,
   createContact,
