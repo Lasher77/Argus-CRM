@@ -221,11 +221,168 @@ function createTables() {
     CREATE TABLE IF NOT EXISTS pdf_templates (
       template_id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
-      layout_json TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'invoice',
+      html_content TEXT NOT NULL DEFAULT '',
+      css_content TEXT NOT NULL DEFAULT '',
+      header_html TEXT NOT NULL DEFAULT '',
+      footer_html TEXT NOT NULL DEFAULT '',
+      layout_json TEXT NOT NULL DEFAULT '{}',
+      version_label TEXT,
+      metadata_json TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     )
   `);
+
+  const templateColumns = db
+    .prepare(`PRAGMA table_info(pdf_templates)`)
+    .all()
+    .map((column) => column.name);
+
+  const ensureTemplateColumn = (name, definition) => {
+    if (!templateColumns.includes(name)) {
+      db.exec(`ALTER TABLE pdf_templates ADD COLUMN ${definition}`);
+    }
+  };
+
+  ensureTemplateColumn('type', "type TEXT NOT NULL DEFAULT 'invoice'");
+  ensureTemplateColumn('html_content', "html_content TEXT NOT NULL DEFAULT ''");
+  ensureTemplateColumn('css_content', "css_content TEXT NOT NULL DEFAULT ''");
+  ensureTemplateColumn('header_html', "header_html TEXT NOT NULL DEFAULT ''");
+  ensureTemplateColumn('footer_html', "footer_html TEXT NOT NULL DEFAULT ''");
+  ensureTemplateColumn('layout_json', "layout_json TEXT NOT NULL DEFAULT '{}' ");
+  ensureTemplateColumn('version_label', 'version_label TEXT');
+  ensureTemplateColumn('metadata_json', 'metadata_json TEXT');
+
+  const templateCount = db.prepare('SELECT COUNT(*) AS count FROM pdf_templates').get().count;
+  if (templateCount === 0) {
+    const insertStmt = db.prepare(`
+      INSERT INTO pdf_templates (
+        name,
+        type,
+        html_content,
+        css_content,
+        header_html,
+        footer_html,
+        layout_json,
+        version_label,
+        metadata_json
+      )
+      VALUES (@name, @type, @html, @css, @header, @footer, @layout, @version, @metadata)
+    `);
+
+    const defaultTemplates = [
+      {
+        name: 'Standard Rechnungsvorlage',
+        type: 'invoice',
+        version: 'V1.0',
+        header: '<div class="header"><h1>{{company.name}}</h1><p>{{company.address}}</p></div>',
+        footer:
+          '<div class="footer"><p>Seite {{page}} / {{totalPages}}</p><p>{{company.phone}} · {{company.email}}</p></div>',
+        css: `
+          body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1c1c1c; }
+          .header, .footer { text-align: center; }
+          .invoice-meta { margin-top: 24px; }
+          .invoice-meta strong { display: inline-block; min-width: 140px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+          th, td { border-bottom: 1px solid #dcdcdc; padding: 8px; text-align: left; }
+          th { background: #f5f6fa; }
+          .total { text-align: right; font-size: 1.1rem; font-weight: bold; }
+        `,
+        html: `
+          <section class="invoice-meta">
+            <p><strong>Rechnungsnummer:</strong> {{invoice.number}}</p>
+            <p><strong>Rechnungsdatum:</strong> {{date invoice.date "DD.MM.YYYY"}}</p>
+            <p><strong>Kunde:</strong> {{customer.name}}</p>
+          </section>
+          <table>
+            <thead>
+              <tr>
+                <th>Position</th>
+                <th>Menge</th>
+                <th>Einheit</th>
+                <th>Preis</th>
+                <th>Gesamt</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each invoice.items}}
+                <tr>
+                  <td>{{description}}</td>
+                  <td>{{quantity}}</td>
+                  <td>{{unit}}</td>
+                  <td>{{currency unitPrice}}</td>
+                  <td>{{currency total}}</td>
+                </tr>
+              {{/each}}
+            </tbody>
+          </table>
+          <p class="total">Zwischensumme: {{currency invoice.subtotal}}</p>
+          <p class="total">Gesamt: {{currency invoice.total}}</p>
+        `,
+      },
+      {
+        name: 'Standard Angebotsvorlage',
+        type: 'offer',
+        version: 'V1.0',
+        header:
+          '<div class="header"><h1>Angebot</h1><p>{{company.name}} · {{company.address}}</p></div>',
+        footer:
+          '<div class="footer"><p>Gültig bis {{date offer.validUntil "DD.MM.YYYY"}}</p><p>Seite {{page}} / {{totalPages}}</p></div>',
+        css: `
+          body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1c1c1c; }
+          .header, .footer { text-align: center; }
+          .offer-meta { margin-top: 24px; }
+          .offer-meta strong { display: inline-block; min-width: 140px; }
+          ul.offer-items { list-style: none; padding: 0; margin-top: 24px; }
+          ul.offer-items li { border-bottom: 1px solid #dcdcdc; padding: 12px 0; }
+          ul.offer-items li:last-child { border-bottom: none; }
+        `,
+        html: `
+          <section class="offer-meta">
+            <p><strong>Angebotsnummer:</strong> {{offer.number}}</p>
+            <p><strong>Angebotsdatum:</strong> {{date offer.date "DD.MM.YYYY"}}</p>
+            <p><strong>Kunde:</strong> {{customer.name}}</p>
+          </section>
+          <ul class="offer-items">
+            {{#each offer.items}}
+              <li>
+                <strong>{{title}}</strong><br/>
+                {{description}}<br/>
+                {{quantity}} × {{currency unitPrice}} = {{currency total}}
+              </li>
+            {{/each}}
+          </ul>
+          <p class="total">Gesamt: {{currency offer.total}}</p>
+        `,
+      },
+    ];
+
+    const defaultLayout = JSON.stringify({
+      canvas: { width: 595, height: 842 },
+      elements: [],
+    });
+
+    const defaultMetadata = JSON.stringify({ createdBy: 'system', isDefault: true });
+
+    const insertMany = db.transaction((templates) => {
+      for (const tpl of templates) {
+        insertStmt.run({
+          name: tpl.name,
+          type: tpl.type,
+          html: tpl.html.trim(),
+          css: tpl.css.trim(),
+          header: tpl.header,
+          footer: tpl.footer,
+          layout: defaultLayout,
+          version: tpl.version,
+          metadata: defaultMetadata,
+        });
+      }
+    });
+
+    insertMany(defaultTemplates);
+  }
 
   // Mitarbeitende
   db.exec(`

@@ -30,6 +30,10 @@ const dataDir = path.join(__dirname, '../data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
+const templateAssetDir = path.join(dataDir, 'template-assets');
+if (!fs.existsSync(templateAssetDir)) {
+  fs.mkdirSync(templateAssetDir, { recursive: true });
+}
 
 // Express App initialisieren
 const app = express();
@@ -40,6 +44,15 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev')); // Logging
+app.use(
+  '/api/template-assets',
+  express.static(templateAssetDir, {
+    setHeaders: (res) => {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+    }
+  })
+);
 
 // API-Routen
 app.use('/api/setup', setupRoutes);
