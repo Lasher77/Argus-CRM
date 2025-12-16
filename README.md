@@ -1,54 +1,87 @@
 # Argus CRM
 
-Argus CRM ist ein einfaches CRM-System f\u00fcr Hausverwaltungen. Das Projekt besteht aus einem Node.js Backend und einer React Frontend-Anwendung. Die Daten werden in einer SQLite Datenbank gespeichert.
+Argus CRM ist ein CRM-System für Hausverwaltungen, optimiert für den Einsatz in kleinen Teams. Das Projekt besteht aus einem Node.js Backend und einer React Frontend-Anwendung. Die Daten werden in einer lokalen SQLite Datenbank gespeichert.
 
-## Verzeichnis\u00fcbersicht
+## Features
 
-- **backend** – Express API und Datenbankinitialisierung
+- **Kunden- & Kontaktverwaltung:** Verwalten von Hausverwaltungen, Objekten und Ansprechpartnern.
+- **Auftragsmanagement:** Serviceaufträge erstellen, planen und dokumentieren.
+- **Rechnungswesen:** Angebote und Rechnungen erstellen.
+- **PDF-Vorlagen:** Integrierter Drag-and-Drop Editor für individuelle Rechnungs- und Angebotslayouts.
+- **Materialverwaltung:** Einfache Lagerverwaltung und Materialverfolgung.
+
+## Verzeichnisübersicht
+
+- **backend** – Express API, Datenbanklogik und PDF-Rendering
 - **frontend** – React Anwendung mit Material UI
-- **data** – SQLite Datenbank (wird beim ersten Start erstellt)
+- **data** – SQLite Datenbank und Vorlagen-Assets (wird automatisch erstellt)
 
 ## Voraussetzungen
 
-- Node.js >= 18
-- npm
+- **Node.js**: Version 20 oder 22 empfohlen (Mindestens 18)
+- **npm**: Wird mit Node.js installiert
 
 ## Installation
 
-Alle Abh\u00e4ngigkeiten k\u00f6nnen mit einem Befehl installiert werden:
+1. Repository klonen
+2. Alle Abhängigkeiten installieren:
 
 ```bash
 npm run install-all
 ```
 
-Alternativ lassen sich Backend und Frontend separat installieren:
-
-```bash
-cd backend && npm install
-cd ../frontend && npm install
-```
-
 ## Datenbank initialisieren
 
-Das Backend enth\u00e4lt Skripte zum Anlegen der Datenbanktabellen und zum Einf\u00fcgen von Testdaten.
+Vor dem ersten Start muss die Datenbank initialisiert werden. Dies erstellt die notwendigen Tabellen im `data/` Ordner.
 
 ```bash
 cd backend
-npm run init-db   # Tabellen erstellen
-npm run seed-db   # optionale Beispieldaten einf\u00fcgen
+npm run init-db
 ```
 
-## Entwicklung starten
+*Optional: Testdaten einfügen*
+```bash
+npm run seed-db
+```
 
-Um Backend und Frontend gleichzeitig zu starten, kann folgender Befehl im Projektstamm ausgef\u00fchrt werden:
+## Starten (Entwicklung)
+
+Um Backend und Frontend gleichzeitig im Entwicklungsmodus zu starten (Hot-Reloading):
 
 ```bash
 npm run dev
 ```
 
-- Backend: [http://localhost:3000](http://localhost:3000)
+- Backend API: [http://localhost:3000](http://localhost:3000)
 - Frontend: [http://localhost:3001](http://localhost:3001)
+
+## Starten (Produktiv / Deployment)
+
+Für den produktiven Einsatz (z.B. auf einem lokalen Mac Server oder hinter Cloudflare Tunnel) empfiehlt es sich, das Frontend zu bauen und vom Backend ausliefern zu lassen. So läuft die gesamte Anwendung über einen einzigen Port (3000).
+
+1. Frontend bauen:
+   ```bash
+   cd frontend
+   npm run build
+   ```
+
+2. Backend starten:
+   ```bash
+   cd ../backend
+   npm start
+   ```
+
+Die Anwendung ist nun unter [http://localhost:3000](http://localhost:3000) erreichbar.
+
+## Ersteinrichtung
+
+Beim allerersten Start der Anwendung werden Sie automatisch zum **Setup-Assistenten** weitergeleitet. Dort können Sie das erste Administrator-Konto erstellen.
+
+## Deployment Hinweise
+
+- **Cloudflare Tunnel:** Da die Anwendung im Produktionsmodus alles über Port 3000 ausliefert, müssen Sie lediglich diesen Port über Ihren Tunnel freigeben.
+- **Datensicherung:** Sichern Sie regelmäßig den Ordner `data/`. Er enthält die SQLite-Datenbank (`crm-argus.db`) sowie hochgeladene Bilder für Vorlagen.
 
 ## Lizenzen
 
-Dieses Projekt steht ohne spezielle Lizenz zur Verf\u00fcgung. Nutzen auf eigene Gefahr.
+Dieses Projekt steht ohne spezielle Lizenz zur Verfügung. Nutzen auf eigene Gefahr.
