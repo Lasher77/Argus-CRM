@@ -18,7 +18,7 @@ router.post('/templates/:id/duplicate', templateGuard, templateController.duplic
 router.post('/templates/:id/render', templateGuard, templateController.renderTemplateToPdf);
 router.delete('/templates/:id', templateGuard, templateController.deleteTemplate);
 
-router.get('/template-assets', templateGuard, templateAssetController.listAssets);
+router.get('/template-assets/list', templateGuard, templateAssetController.listAssets);
 router.post('/template-assets', templateGuard, templateAssetController.uploadAsset);
 
 module.exports = router;
