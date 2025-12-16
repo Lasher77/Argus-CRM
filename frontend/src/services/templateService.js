@@ -56,7 +56,7 @@ export const renderPdf = async (id, data) => {
 };
 
 export const listTemplateAssets = async () => {
-  const response = await apiClient.get('/template-assets');
+  const response = await apiClient.get('/template-assets/list');
   return withData(response) ?? [];
 };
 
