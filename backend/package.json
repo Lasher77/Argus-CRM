@@ -8,6 +8,7 @@
     "start:test": "cross-env NODE_ENV=test TEST_DB_PATH=./data/e2e-test.db node scripts/startTestServer.js",
     "dev": "nodemon src/app.js",
     "init-db": "node db/init.js",
+    "reset-db": "node db/init.js --reset",
     "seed-db": "node db/seed.js",
     "test": "cross-env NODE_ENV=test jest --runInBand",
     "test:watch": "cross-env NODE_ENV=test jest --watch",

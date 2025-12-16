@@ -40,9 +40,11 @@ npm run init-db
 ```
 
 *Optional: Testdaten einfügen*
+Wenn Sie die Anwendung testen möchten, können Sie Testdaten (inkl. Benutzer) generieren:
 ```bash
 npm run seed-db
 ```
+**Hinweis:** Dies erstellt Standard-Benutzer wie `admin` (Passwort: `admin123`) oder `user` (Passwort: `user123`). Der Setup-Assistent wird dann **nicht** angezeigt.
 
 ## Starten (Entwicklung)
 
@@ -76,6 +78,13 @@ Die Anwendung ist nun unter [http://localhost:3000](http://localhost:3000) errei
 ## Ersteinrichtung
 
 Beim allerersten Start der Anwendung werden Sie automatisch zum **Setup-Assistenten** weitergeleitet. Dort können Sie das erste Administrator-Konto erstellen.
+
+**Wichtig:** Der Setup-Assistent erscheint nur, wenn die Datenbank **keine Benutzer** enthält. Haben Sie `npm run seed-db` ausgeführt, müssen Sie die Datenbank zurücksetzen, um den Assistenten zu testen:
+
+```bash
+cd backend
+npm run reset-db
+```
 
 ## Deployment Hinweise
 
