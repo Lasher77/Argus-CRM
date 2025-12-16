@@ -118,8 +118,8 @@ const buildInlineHtmlDocument = ({ bodyHtml, headerHtml, footerHtml, css }) => `
 
 const replacePageTokens = (html) =>
   html
-    .replace(/{{\s*page\s*}}/gu, '<span class="pageNumber"></span>')
-    .replace(/{{\s*totalPages\s*}}/gu, '<span class="totalPages"></span>');
+    .replace(/\{\{\s*page\s*\}\}/gu, '<span class="pageNumber"></span>')
+    .replace(/\{\{\s*totalPages\s*\}\}/gu, '<span class="totalPages"></span>');
 
 const buildPdfPayload = (template, data = {}) => {
   const sections = resolveTemplateSections(template, data);

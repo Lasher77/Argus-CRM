@@ -5,6 +5,8 @@ const cors = require('cors');
 const morgan = require('morgan');
 const path = require('path');
 const fs = require('fs');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { authenticateJWT } = require('./middleware/authMiddleware');
 const { ApiError, createErrorResponse } = require('./utils/apiError');
 const initDatabase = require('../db/init');
@@ -39,11 +41,26 @@ if (!fs.existsSync(templateAssetDir)) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// Security Middleware
+app.use(helmet({
+  contentSecurityPolicy: false // Disable CSP for now to avoid issues with inline scripts/styles in templates
+}));
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // limit each IP to 500 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api', limiter);
+
+// General Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev')); // Logging
+
+// Static Assets
 app.use(
   '/api/template-assets',
   express.static(templateAssetDir, {
@@ -70,27 +87,31 @@ app.use('/api', reportRoutes);
 app.use('/api', invoiceRoutes);
 app.use('/api', uploadRoutes);
 
-// Einfache Root-Route für API-Test
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Willkommen bei der WerkAssist API',
-    version: '1.0.0',
-    endpoints: {
-      accounts: '/api/accounts',
-      contacts: '/api/contacts',
-      properties: '/api/properties',
-      quotes: '/api/quotes',
-      templates: '/api/templates',
-      employees: '/api/employees',
-      service_orders: '/api/service-orders',
-      materials: '/api/materials',
-      reports: '/api/reports',
-      invoices: '/api/invoices'
-    }
-  });
-});
+// Serve Frontend Build if it exists (Production Mode)
+const frontendBuildPath = path.join(__dirname, '../../frontend/build');
+if (fs.existsSync(frontendBuildPath)) {
+  app.use(express.static(frontendBuildPath));
 
-// 404 Handler
+  // SPA Fallback: Serve index.html for any unknown routes (that are not /api)
+  app.get('*', (req, res) => {
+    if (req.path.startsWith('/api')) {
+      return res.status(404).json({ error: 'API route not found' });
+    }
+    res.sendFile(path.join(frontendBuildPath, 'index.html'));
+  });
+} else {
+  // Simple Root Route for API Test if frontend is not built
+  app.get('/', (req, res) => {
+    res.json({
+      message: 'Willkommen bei der WerkAssist API',
+      version: '1.0.0',
+      status: 'Development',
+      frontend: 'Not served by backend in this mode'
+    });
+  });
+}
+
+// 404 Handler (only if frontend didn't catch it)
 app.use((req, res, next) => {
   next(new ApiError(404, 'Route nicht gefunden', { code: 'ROUTE_NOT_FOUND' }));
 });
@@ -121,6 +142,9 @@ app.use((err, req, res, next) => {
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`Server läuft auf http://localhost:${PORT}`);
+    if (fs.existsSync(frontendBuildPath)) {
+      console.log('Frontend wird ebenfalls ausgeliefert.');
+    }
   });
 }
 

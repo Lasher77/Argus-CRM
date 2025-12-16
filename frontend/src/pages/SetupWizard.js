@@ -10,44 +10,43 @@ import {
   Typography
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import apiClient from '../services/apiClient';
+import axios from 'axios';
+
+// Create a direct axios instance for setup to bypass auth interceptors if any
+const setupClient = axios.create({
+  baseURL: process.env.REACT_APP_API_URL || '/api'
+});
 
 const SetupWizard = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    companyName: '',
+    username: '',
     email: '',
+    firstName: '',
+    lastName: '',
     password: '',
     confirmPassword: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [statusChecked, setStatusChecked] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true);
 
   useEffect(() => {
-    let isMounted = true;
-
     const checkSetupStatus = async () => {
       try {
-        await apiClient.get('/setup');
-        if (isMounted) {
-          setStatusChecked(true);
+        const response = await setupClient.get('/setup/status');
+        if (response.data.initialized) {
+          // If already initialized, go to login
+          navigate('/login', { replace: true });
         }
       } catch (err) {
-        if (err.response?.status === 409) {
-          navigate('/login', { replace: true });
-        } else if (isMounted) {
-          setError(err.response?.data?.message || 'Setup-Assistent konnte nicht geladen werden.');
-          setStatusChecked(true);
-        }
+        console.error("Failed to check setup status", err);
+      } finally {
+        setCheckingStatus(false);
       }
     };
 
     checkSetupStatus();
-
-    return () => {
-      isMounted = false;
-    };
   }, [navigate]);
 
   const handleChange = (event) => {
@@ -67,25 +66,31 @@ const SetupWizard = () => {
     setError(null);
 
     try {
-      await apiClient.post('/setup', {
-        companyName: form.companyName.trim(),
+      await setupClient.post('/setup/register', {
+        username: form.username.trim(),
         email: form.email.trim(),
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
         password: form.password
       });
 
       navigate('/login', {
         replace: true,
-        state: { setupCompleted: true }
+        state: { message: 'Administrator-Account erfolgreich erstellt. Bitte anmelden.' }
       });
     } catch (err) {
-      setError(err.response?.data?.message || 'Setup konnte nicht abgeschlossen werden.');
+      setError(err.response?.data?.error || 'Setup konnte nicht abgeschlossen werden.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (!statusChecked) {
-    return null;
+  if (checkingStatus) {
+    return (
+      <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography>Lade Setup...</Typography>
+      </Container>
+    );
   }
 
   return (
@@ -94,30 +99,47 @@ const SetupWizard = () => {
         <Stack spacing={3} component="form" onSubmit={handleSubmit}>
           <Box>
             <Typography variant="h4" component="h1" gutterBottom>
-              WerkAssist Setup
+              Willkommen bei Argus CRM
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Legen Sie einen Administrator-Zugang an und hinterlegen Sie den Namen Ihrer Firma.
+              Es wurde kein Benutzerkonto gefunden. Bitte erstellen Sie einen Administrator-Zugang, um zu beginnen.
             </Typography>
           </Box>
 
-          {error ? (
-            <Alert severity="error" data-testid="setup-error">
+          {error && (
+            <Alert severity="error">
               {error}
             </Alert>
-          ) : null}
+          )}
 
           <TextField
-            label="Firmenname"
-            name="companyName"
-            value={form.companyName}
+            label="Benutzername"
+            name="username"
+            value={form.username}
             onChange={handleChange}
             required
             fullWidth
           />
 
+          <Stack direction="row" spacing={2}>
+             <TextField
+              label="Vorname"
+              name="firstName"
+              value={form.firstName}
+              onChange={handleChange}
+              fullWidth
+            />
+            <TextField
+              label="Nachname"
+              name="lastName"
+              value={form.lastName}
+              onChange={handleChange}
+              fullWidth
+            />
+          </Stack>
+
           <TextField
-            label="Administrator E-Mail"
+            label="E-Mail Adresse"
             name="email"
             type="email"
             value={form.email}
@@ -151,7 +173,7 @@ const SetupWizard = () => {
           />
 
           <Button type="submit" variant="contained" size="large" disabled={loading}>
-            {loading ? 'Setup wird abgeschlossen...' : 'Setup abschließen'}
+            {loading ? 'Konto erstellen...' : 'Administrator erstellen'}
           </Button>
         </Stack>
       </Paper>

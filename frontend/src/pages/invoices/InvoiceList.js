@@ -34,7 +34,8 @@ import SendIcon from '@mui/icons-material/Send';
 import dayjs from 'dayjs';
 import { Link as RouterLink } from 'react-router-dom';
 import InvoiceService from '../../services/invoiceService';
-import { createInvoicePdf, pdfToDataUri } from '../../utils/pdfUtils';
+import InvoiceTemplateDialog from '../../components/invoices/InvoiceTemplateDialog';
+import templateService from '../../services/templateService';
 
 const statusOptions = [
   { value: '', label: 'Alle Status' },
@@ -90,6 +91,8 @@ const InvoiceList = () => {
   const [search, setSearch] = useState('');
   const [pendingStatus, setPendingStatus] = useState({});
   const [sendingInvoices, setSendingInvoices] = useState({});
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
 
   const loadInvoices = async () => {
     try {
@@ -131,45 +134,104 @@ const InvoiceList = () => {
     }
   };
 
-  const handleDownloadInvoice = (invoice) => {
-    const doc = createInvoicePdf(invoice);
-    doc.save(`Rechnung-${invoice.invoice_number || invoice.invoice_id}.pdf`);
+  const handleOpenTemplateDialog = (invoice) => {
+    setSelectedInvoice(invoice);
+    setTemplateDialogOpen(true);
   };
 
-  const handleSendInvoice = async (invoice) => {
-    if (sendingInvoices[invoice.invoice_id]) {
-      return;
-    }
+  const prepareTemplateData = async (invoice) => {
+      // Need to fetch full invoice details to get items
+      const fullInvoice = await InvoiceService.getInvoice(invoice.invoice_id);
 
-    const defaultRecipient = invoice.contact_email || invoice.account_email || '';
-    const to = window.prompt('Empfänger E-Mail-Adresse', defaultRecipient);
-    if (!to) {
-      return;
-    }
+      return {
+        invoice: {
+          number: fullInvoice.invoice_number,
+          date: fullInvoice.invoice_date,
+          dueDate: fullInvoice.due_date,
+          subtotal: fullInvoice.total_net,
+          vat: fullInvoice.total_gross - fullInvoice.total_net,
+          total: fullInvoice.total_gross,
+          items: fullInvoice.items.map(item => ({
+             description: item.description,
+             quantity: item.quantity,
+             unit: item.unit,
+             unitPrice: item.unit_price,
+             total: item.total_net
+          }))
+        },
+        customer: {
+          name: fullInvoice.account_name,
+          contact: fullInvoice.contact_name
+        },
+        company: {
+           // Should ideally come from system settings
+           name: 'Argus Facility Services',
+           email: 'info@argus-facility.de'
+        }
+      };
+  }
 
+  const handleDownloadInvoice = async (templateId, invoice) => {
     try {
-      setSendingInvoices((prev) => ({ ...prev, [invoice.invoice_id]: true }));
-      const doc = createInvoicePdf(invoice);
-      const pdfData = pdfToDataUri(doc);
-      await InvoiceService.sendInvoice(invoice.invoice_id, {
-        to,
-        pdfData,
-        filename: `Rechnung-${invoice.invoice_number || invoice.invoice_id}.pdf`,
-        subject: `Rechnung ${invoice.invoice_number || `#${invoice.invoice_id}`}`,
-        message: `Guten Tag,\n\nanbei erhalten Sie die Rechnung ${
-          invoice.invoice_number || `#${invoice.invoice_id}`
-        } als PDF.\n\nMit freundlichen Grüßen\nIhr Serviceteam`,
-      });
-      window.alert('Rechnung wurde versendet.');
-    } catch (error) {
-      console.error('Rechnung konnte nicht gesendet werden', error);
-      window.alert('Rechnung konnte nicht gesendet werden. Bitte versuchen Sie es erneut.');
-    } finally {
-      setSendingInvoices((prev) => {
-        const { [invoice.invoice_id]: _discarded, ...rest } = prev;
-        return rest;
-      });
+      const templateData = await prepareTemplateData(invoice);
+      const blob = await templateService.renderPdf(templateId, templateData);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Rechnung-${invoice.invoice_number}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error("PDF generation failed", err);
+      setError("PDF konnte nicht generiert werden.");
     }
+  };
+
+  const handleSendInvoice = async (templateId, invoice, email) => {
+     if (sendingInvoices[invoice.invoice_id]) return;
+
+     try {
+       setSendingInvoices((prev) => ({ ...prev, [invoice.invoice_id]: true }));
+
+       const templateData = await prepareTemplateData(invoice);
+       const blob = await templateService.renderPdf(templateId, templateData);
+
+       // Convert blob to Data URI for the legacy sendInvoice API
+       // Note: Ideally sendInvoice should accept Blob/FormData, but we work with what we have
+       const reader = new FileReader();
+       reader.readAsDataURL(blob);
+       reader.onloadend = async () => {
+           const pdfData = reader.result;
+
+           try {
+             await InvoiceService.sendInvoice(invoice.invoice_id, {
+                to: email,
+                pdfData, // Send the Base64 Data URI
+                filename: `Rechnung-${invoice.invoice_number || invoice.invoice_id}.pdf`,
+                subject: `Rechnung ${invoice.invoice_number || `#${invoice.invoice_id}`}`,
+                message: `Guten Tag,\n\nanbei erhalten Sie die Rechnung ${
+                  invoice.invoice_number || `#${invoice.invoice_id}`
+                } als PDF.\n\nMit freundlichen Grüßen\nIhr Serviceteam`,
+              });
+              window.alert('Rechnung wurde versendet.');
+           } catch (sendErr) {
+               throw sendErr;
+           } finally {
+               setSendingInvoices((prev) => {
+                const { [invoice.invoice_id]: _discarded, ...rest } = prev;
+                return rest;
+              });
+           }
+       };
+     } catch (err) {
+       console.error("Sending invoice failed", err);
+       window.alert("Versand fehlgeschlagen: " + (err.message || "Unbekannter Fehler"));
+       setSendingInvoices((prev) => {
+            const { [invoice.invoice_id]: _discarded, ...rest } = prev;
+            return rest;
+       });
+     }
   };
 
   const filteredInvoices = useMemo(() => {
@@ -467,7 +529,7 @@ const InvoiceList = () => {
                             <Stack direction="row" spacing={1} justifyContent="center">
                               <Tooltip title="Rechnung als PDF speichern">
                                 <span>
-                                  <IconButton size="small" onClick={() => handleDownloadInvoice(invoice)}>
+                                  <IconButton size="small" onClick={() => handleOpenTemplateDialog(invoice)}>
                                     <PictureAsPdfIcon fontSize="small" />
                                   </IconButton>
                                 </span>
@@ -476,7 +538,7 @@ const InvoiceList = () => {
                                 <span>
                                   <IconButton
                                     size="small"
-                                    onClick={() => handleSendInvoice(invoice)}
+                                    onClick={() => handleOpenTemplateDialog(invoice)}
                                     disabled={Boolean(sendingInvoices[invoice.invoice_id])}
                                   >
                                     <SendIcon fontSize="small" />
@@ -507,6 +569,14 @@ const InvoiceList = () => {
           )}
         </CardContent>
       </Card>
+
+      <InvoiceTemplateDialog
+        open={templateDialogOpen}
+        onClose={() => setTemplateDialogOpen(false)}
+        invoice={selectedInvoice}
+        onDownload={handleDownloadInvoice}
+        onSend={handleSendInvoice}
+      />
     </Box>
   );
 };
