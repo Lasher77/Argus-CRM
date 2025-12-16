@@ -176,7 +176,7 @@ const generateTableHtml = (element) => {
     .map(
       () =>
         `<tr>${columns
-          .map((col, colIndex) => `<td>{{this.row${colIndex + 1} || ''}}</td>`)
+          .map((col, colIndex) => `<td>{{this.row${colIndex + 1}}}</td>`)
           .join('')}</tr>`
     )
     .join('')}</tbody>`;

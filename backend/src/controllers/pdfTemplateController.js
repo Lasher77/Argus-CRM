@@ -168,6 +168,13 @@ const previewTemplate = (req, res) => {
     if (error instanceof ZodError) {
       return handleZodError(res, error);
     }
+    if (error.message && error.message.includes('Parse error')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Template-Syntaxfehler: ' + error.message
+      });
+    }
+
     return handleUnknownError(res, error, 'Vorschau konnte nicht erzeugt werden');
   }
 };
@@ -204,6 +211,13 @@ const renderTemplateToPdf = async (req, res) => {
         success: false,
         message: error.message,
         ...(error.details ? { details: error.details } : {})
+      });
+    }
+
+    if (error.message && error.message.includes('Parse error')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Template-Syntaxfehler: ' + error.message
       });
     }
 
