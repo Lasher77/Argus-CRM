@@ -749,37 +749,6 @@ function seedDatabase() {
       insertProduct.run(product);
     });
     
-    // Benutzer einfügen
-    const users = [
-      {
-        username: 'admin',
-        email: 'admin@crm-argus.de',
-        password_hash: '$2a$10$XFE0UQYWjlVTvf5zQR8WQOQgpYN1vXBfpKzHGC0C8L2MRlYT.wy1G', // "admin123"
-        first_name: 'Admin',
-        last_name: 'User',
-        role: 'admin',
-        is_active: 1
-      },
-      {
-        username: 'user',
-        email: 'user@crm-argus.de',
-        password_hash: '$2a$10$XFE0UQYWjlVTvf5zQR8WQOQgpYN1vXBfpKzHGC0C8L2MRlYT.wy1G', // "user123"
-        first_name: 'Standard',
-        last_name: 'User',
-        role: 'user',
-        is_active: 1
-      }
-    ];
-    
-    const insertUser = db.prepare(`
-      INSERT INTO users (username, email, password_hash, first_name, last_name, role, is_active)
-      VALUES (@username, @email, @password_hash, @first_name, @last_name, @role, @is_active)
-    `);
-    
-    users.forEach(user => {
-      insertUser.run(user);
-    });
-    
     // Angebote einfügen
     const quotes = [
       {
