@@ -194,7 +194,11 @@ const generateElementHtml = (element) => {
   const positionStyles = `left:${element.x}px;top:${element.y}px;`;
 
   if (element.type === 'image') {
-    const src = element.data?.src || '';
+    let src = element.data?.src || '';
+    // Prevent 404s by ensuring src is not just the base path
+    if (src === '/api/template-assets' || src === '/api/template-assets/') {
+      src = '';
+    }
     const objectFit = element.data?.objectFit || 'contain';
     return `<div class="tpl-element" style="${positionStyles}${styleString}"><img src="${src}" style="width:100%;height:100%;object-fit:${objectFit};" alt=""/></div>`;
   }
@@ -513,6 +517,13 @@ const LayoutEditor = () => {
   const renderElementControl = (element) => {
     const style = buildElementStyle(element);
     const isSelected = element.id === selectedElementId;
+
+    // Check for invalid image source to prevent 404s
+    const isImageWithValidSrc = element.type === 'image' &&
+      element.data?.src &&
+      element.data.src !== '/api/template-assets' &&
+      element.data.src !== '/api/template-assets/';
+
     return (
       <Draggable key={element.id} position={{ x: element.x, y: element.y }} onStop={(_event, data) => handleDragStop(element.id, data)}>
         <Box
@@ -527,7 +538,7 @@ const LayoutEditor = () => {
           }}
         >
           {element.type === 'image' ? (
-            element.data?.src ? (
+            isImageWithValidSrc ? (
               <img src={element.data?.src} alt="" style={{ width: '100%', height: '100%', objectFit: element.data?.objectFit || 'contain' }} />
             ) : (
               <Stack alignItems="center" justifyContent="center" sx={{ width: '100%', height: '100%', color: '#94a3b8' }}>
