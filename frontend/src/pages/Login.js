@@ -11,6 +11,11 @@ import {
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import apiClient from '../services/apiClient';
+import axios from 'axios';
+
+const setupClient = axios.create({
+  baseURL: process.env.REACT_APP_API_URL || '/api'
+});
 
 const Login = () => {
   const navigate = useNavigate();
@@ -20,37 +25,26 @@ const Login = () => {
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
 
+  // Check setup status on mount
   useEffect(() => {
-    let isMounted = true;
-
-    const checkSetupStatus = async () => {
-      try {
-        await apiClient.get('/setup');
-        if (isMounted) {
-          navigate('/setup', { replace: true });
+    const checkSetup = async () => {
+       try {
+        const res = await setupClient.get('/setup/status');
+        if (!res.data.initialized) {
+           navigate('/setup', { replace: true });
         }
-      } catch (err) {
-        if (err.response?.status === 409) {
-          return;
-        }
-
-        if (isMounted) {
-          setError(err.response?.data?.message || 'Der Setup-Status konnte nicht ermittelt werden.');
-        }
-      }
+       } catch (err) {
+         console.error("Failed to check setup status", err);
+       }
     };
-
-    checkSetupStatus();
-
-    return () => {
-      isMounted = false;
-    };
+    checkSetup();
   }, [navigate]);
 
   useEffect(() => {
-    if (location.state?.setupCompleted) {
-      setSuccessMessage('Setup erfolgreich abgeschlossen. Bitte melden Sie sich mit den neuen Zugangsdaten an.');
-      navigate(location.pathname, { replace: true });
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message);
+      // Clear state so refresh doesn't show it again
+      window.history.replaceState({}, document.title);
     }
   }, [location, navigate]);
 
@@ -92,24 +86,24 @@ const Login = () => {
         <Stack spacing={3} component="form" onSubmit={handleSubmit}>
           <Box>
             <Typography variant="h4" component="h1" gutterBottom>
-              WerkAssist Anmeldung
+              Argus CRM Anmeldung
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Melden Sie sich mit Ihren Zugangsdaten an, um das CRM zu nutzen.
+              Melden Sie sich mit Ihren Zugangsdaten an.
             </Typography>
           </Box>
 
-          {successMessage ? (
-            <Alert severity="success" data-testid="login-success">
+          {successMessage && (
+            <Alert severity="success">
               {successMessage}
             </Alert>
-          ) : null}
+          )}
 
-          {error ? (
-            <Alert severity="error" data-testid="login-error">
+          {error && (
+            <Alert severity="error">
               {error}
             </Alert>
-          ) : null}
+          )}
 
           <TextField
             label="Benutzername oder E-Mail"

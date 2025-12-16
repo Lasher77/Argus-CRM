@@ -21,3 +21,5 @@ frontend/public/icons/
 frontend/test-results/
 frontend/playwright-report/
 frontend/tests/e2e/*-snapshots/
+frontend/build/
+backend/data/
